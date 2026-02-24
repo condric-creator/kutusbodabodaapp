@@ -1,0 +1,10 @@
+POST http://127.0.0.1:5000/riders/register
+Content-Type: application/json
+
+{
+  "name": "ken emmayan nyaga",
+  "id_number": "123456876",
+  "plate": "KMGS567M"
+}
+### Get All Riders
+GET http://127.0.0.1:5000/riders/list

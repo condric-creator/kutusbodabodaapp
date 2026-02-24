@@ -1,0 +1,4 @@
+# Python libraries for Kutus Boda app
+# Add your dependencies here, e.g.:
+flask>=3.0.0
+# requests>=2.31.0

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kutus Boda App | Trusted Ride</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00ffa3">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3198/3198336.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@500;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root { --neon: #00ffa3; --dark: #0a0f1d; }
+        body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--dark); color: white; overflow-x: hidden; }
+        .glass-card { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 25px; width: 100%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; }
+        .active { display: flex; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.1); color: white; box-sizing: border-box; font-size: 16px; }
+        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.2s; box-shadow: 0 0 15px var(--neon); }
+        .header { width: 100%; display: flex; justify-content: space-between; padding: 15px; background: #fff; color: var(--dark); position: fixed; top: 0; z-index: 10; border-bottom: 3px solid var(--neon); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 100px; width: 100%; max-width: 500px; }
+        .loc-btn { background: white; color: black; padding: 25px; border-radius: 15px; text-align: center; font-weight: 800; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        #pay-modal { display: none; position: fixed; bottom: 0; width: 100%; background: white; color: black; padding: 30px; border-radius: 30px 30px 0 0; z-index: 100; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-scr" class="screen active" style="justify-content: center;">
+        <div class="glass-card">
+            <h1 style="font-family:Orbitron; color:var(--neon); text-align:center; margin-bottom:5px;">KUTUS BODA</h1>
+            <p style="text-align:center; margin-top:0; font-size:12px; letter-spacing:2px; color:var(--neon); font-weight:bold;">TRUSTED RIDE</p>
+            
+            <div style="display:flex; gap:10px; margin:20px 0;">
+                <button id="tab-st" onclick="setRole('student')" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--neon); font-weight:800; cursor:pointer;">Student</button>
+                <button id="tab-rd" onclick="setRole('rider')" style="flex:1; padding:12px; border-radius:10px; border:none; background:white; font-weight:800; cursor:pointer;">Rider</button>
+            </div>
+
+            <div id="auth-fields">
+                <input id="login-name" placeholder="Name">
+                <input id="login-pass" type="password" placeholder="Password">
+            </div>
+            <button class="btn" onclick="handleLogin()" style="margin-top:20px;">ENTER APP</button>
+        </div>
+    </div>
+
+    <div id="std-dash" class="screen" style="background:#f1f5f9; color:black; justify-content:start;">
+        <div class="header">
+            <h3 style="margin:0; font-family:Orbitron; color:var(--dark);">KUTUS BODA</h3>
+            <button onclick="logout()" style="color:red; background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
+        </div>
+        <div id="std-content" class="grid"></div>
+    </div>
+
+    <div id="rid-dash" class="screen" style="background:#f1f5f9; color:black; justify-content:start;">
+        <div class="header"><h3 style="font-family:Orbitron;">RIDER HUB</h3><button onclick="logout()" style="color:red; background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button></div>
+        <div style="margin-top:100px; background:white; padding:30px; border-radius:25px; width:90%; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+            <h2 id="rid-user">RIDER</h2>
+            <button id="active-btn" class="btn" onclick="toggleActive()" style="background:#64748b; color:white;">GO ACTIVE</button>
+            <p style="font-size:11px; color:gray; margin-top:10px;">*Upload bike photo for verification</p>
+            <input type="file" accept="image/*" onchange="preview(event)" style="padding:10px; font-size:12px; background:#f1f5f9; color:black;">
+            <img id="bike-preview" style="width:100%; border-radius:15px; margin-top:15px; display:none; border:2px solid var(--neon);">
+        </div>
+    </div>
+
+    <div id="pay-modal">
+        <h2 style="margin:0; font-size:14px; color:gray;">TRIP FARE</h2>
+        <h1 id="fare-text" style="font-size:45px; margin:5px 0; color:var(--dark);">0 bob</h1>
+        <input id="pay-phone" placeholder="M-Pesa (2547XXXXXXXX)" style="background:#f1f5f9; color:black; border:1px solid #ddd;">
+        <button class="btn" onclick="triggerPayment()">PAY VIA M-PESA</button>
+        <button class="btn" style="background:#eee; color:black; margin-top:10px; box-shadow:none;" onclick="closePay()">Cancel Request</button>
+    </div>
+
+    <script>
+        // 1. PWA SERVICE WORKER REGISTRATION
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('Service Worker Registered!'))
+                .catch(err => console.log('Service Worker Fail:', err));
+            });
+        }
+
+        let currentRole = 'student', currentUserName = '', bikeUploaded = false;
+        const locations = ["Spenza", "Diaspora", "School", "Icon", "Mjini", "Soko"];
+
+        window.onload = () => {
+            const savedName = localStorage.getItem('kutus_name');
+            if(savedName) {
+                currentUserName = savedName;
+                currentRole = localStorage.getItem('kutus_role');
+                showDash();
+            }
+        };
+
+        function setRole(r) {
+            currentRole = r;
+            document.getElementById('tab-st').style.background = r === 'student' ? 'var(--neon)' : 'white';
+            document.getElementById('tab-rd').style.background = r === 'rider' ? 'var(--neon)' : 'white';
+            document.getElementById('auth-fields').innerHTML = r === 'student' ? 
+                `<input id="login-name" placeholder="Name"><input id="login-pass" type="password" placeholder="Password">` :
+                `<input id="login-name" placeholder="Full Name (3 Names)"><input id="login-id" placeholder="ID Number"><input id="login-plate" placeholder="Bike Plate Number">`;
+        }
+
+        async function handleLogin() {
+            currentUserName = document.getElementById('login-name').value;
+            const url = currentRole === 'student' ? '/auth/student' : '/riders/register';
+            const body = currentRole === 'student' ? {name: currentUserName} : 
+                {name: currentUserName, id_number: document.getElementById('login-id').value, plate: document.getElementById('login-plate').value};
+            
+            const res = await fetch('http://127.0.0.1:5000' + url, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+            if(res.ok) {
+                localStorage.setItem('kutus_name', currentUserName);
+                localStorage.setItem('kutus_role', currentRole);
+                showDash();
+            } else { 
+                const d = await res.json();
+                alert(d.error || "Login Failed!"); 
+            }
+        }
+
+        function showDash() {
+            document.getElementById('auth-scr').style.display = 'none';
+            if(currentRole === 'student') {
+                document.getElementById('std-dash').classList.add('active');
+                document.getElementById('std-content').innerHTML = locations.map(l => `<div class="loc-btn" onclick="requestRide('${l}')">${l}</div>`).join('');
+            } else {
+                document.getElementById('rid-dash').classList.add('active');
+                document.getElementById('rid-user').innerText = currentUserName.split(' ')[0].toUpperCase();
+            }
+        }
+
+        async function requestRide(dest) {
+            const check = await fetch('http://127.0.0.1:5000/check_riders');
+            const status = await check.json();
+            if(!status.available) {
+                document.getElementById('std-content').innerHTML = `<div style="grid-column:1/-1; padding:40px; border:2px dashed red; border-radius:20px; text-align:center; background:rgba(255,0,0,0.05);"><h3 style="color:red; margin:0;">NO RIDERS AVAILABLE</h3><p>Try again in a few minutes.</p><button onclick="location.reload()" class="btn" style="background:red; color:white;">Refresh Search</button></div>`;
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const res = await fetch('http://127.0.0.1:5000/calculate_fare', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({lat:pos.coords.latitude, lon:pos.coords.longitude, destination:dest})});
+                const data = await res.json();
+                document.getElementById('fare-text').innerText = data.total_fare + " bob";
+                document.getElementById('pay-modal').style.display = 'block';
+            });
+        }
+
+        function preview(e) {
+            const r = new FileReader();
+            r.onload = () => { 
+                document.getElementById('bike-preview').src = r.result; 
+                document.getElementById('bike-preview').style.display = 'block';
+                bikeUploaded = true;
+            };
+            r.readAsDataURL(e.target.files[0]);
+        }
+
+        async function toggleActive() {
+            if(!bikeUploaded) return alert("Upload bike photo first!");
+            const btn = document.getElementById('active-btn');
+            const isActivating = btn.innerText === "GO ACTIVE";
+            await fetch('http://127.0.0.1:5000/rider/update_status', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name: currentUserName, status: isActivating ? 'available' : 'inactive', has_photo: true})});
+            btn.innerText = isActivating ? "AM ACTIVE" : "GO ACTIVE";
+            btn.style.background = isActivating ? "var(--neon)" : "#64748b";
+            btn.style.color = isActivating ? "black" : "white";
+        }
+
+        async function triggerPayment() {
+            const phone = document.getElementById('pay-phone').value;
+            await fetch('http://127.0.0.1:5000/stk_push', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({phone, amount: parseInt(document.getElementById('fare-text').innerText)})});
+            alert("M-Pesa Prompt Sent!");
+            closePay();
+        }
+
+        function logout() { localStorage.clear(); location.reload(); }
+        function closePay() { document.getElementById('pay-modal').style.display = 'none'; }
+    </script>
+</body>
+</html>
