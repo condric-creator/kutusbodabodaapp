@@ -5,6 +5,9 @@ import requests, base64, re, datetime
 
 app = Flask(__name__)
 CORS(app)
+@app.route('/')
+def home():
+** return "Kutus Boda Boda App is Live!"**
 
 # --- BUSINESS RAM STORAGE ---
 riders_db = {} # Format: {"Name": {"id": "...", "plate": "...", "status": "inactive", "has_photo": False}}
