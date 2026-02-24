@@ -9,6 +9,13 @@ CORS(app)
 def home():
 
     return "Kutus Boda Boda App is Live!"
+@app.route('/register', methods=['POST'])
+def register_rider():
+    from flask import request
+    data = request.json
+    rider_name = data.get("name")
+    riders_db[rider_name] = data
+    return {"message": f"Rider {rider_name} registered successfully!", "total_riders": len(riders_db)}    
 
 # --- BUSINESS RAM STORAGE ---
 riders_db = {} # Format: {"Name": {"id": "...", "plate": "...", "status": "inactive", "has_photo": False}}
