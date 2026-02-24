@@ -1,8 +1,4 @@
-import base64
-import datetime
-import requests
-import os
-import re
+import base64, datetime, requests, os, re
 from flask import Flask, request, jsonify, Blueprint
 from flask_cors import CORS
 from geopy.distance import geodesic
@@ -10,7 +6,7 @@ from geopy.distance import geodesic
 app = Flask(__name__)
 CORS(app)
 
-# --- CONFIGURATION ---
+# --- 1. CONFIGURATION ---
 CONSUMER_KEY = "Cg4GtJjtJDDvjsO6Fts4A1do7sx91rWMGyu5ktxl5YoxSWEx"
 CONSUMER_SECRET = "T4PiebXPp8sRbsOumXR5PcPz4t6utH8kYXCUQcNOlWk7AOo7Xfyegb59WMGccdWf"
 DARAJA_SHORTCODE = "174379"
@@ -23,80 +19,114 @@ KUTUS_LOCATIONS = {
     "Mjini": (-0.5150, 37.2950), "Soko": (-0.5030, 37.2880)
 }
 
-# --- DATABASES (RAM Storage) ---
+# --- 2. STORAGE (RAM + FILES) ---
 students_db = {} 
 riders_db = []
 student_ride_counts = {}
-rider_ride_counts = {}
+pending_requests = [] # Real-time communication list
 
-# --- HELPER: M-PESA TOKEN ---
+def save_record(filename, entry):
+    with open(filename, "a") as f:
+        f.write(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} | {entry}\n")
+
+def reload_records():
+    if os.path.exists("students_records.txt"):
+        with open("students_records.txt", "r") as f:
+            for line in f:
+                parts = line.strip().split(" | ")
+                if len(parts) >= 2:
+                    data = parts[1].split(":")
+                    students_db[data[0].strip()] = data[1].strip()
+    
+    if os.path.exists("riders_records.txt"):
+        with open("riders_records.txt", "r") as f:
+            for line in f:
+                parts = line.strip().split(" | ")
+                if len(parts) >= 2:
+                    r_data = parts[1].split(",")
+                    riders_db.append({"name": r_data[0], "plate": r_data[1], "id": r_data[2], "status": "available"})
+
+# --- 3. DARAJA HELPERS ---
 def get_access_token():
     url = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
     res = requests.get(url, auth=(CONSUMER_KEY, CONSUMER_SECRET))
     return res.json().get('access_token')
 
-# --- BLUEPRINT: STUDENTS ---
+# --- 4. BLUEPRINTS ---
 student_bp = Blueprint('student', __name__)
-@student_bp.route('/students/register', methods=['POST'])
-def reg_std():
+@student_bp.route('/students/auth', methods=['POST'])
+def auth_student():
     data = request.json
     name, password = data.get('name', '').strip(), data.get('password', '')
-    if not name or not password: return jsonify({"error": "Missing credentials"}), 400
+    
+    if name in students_db:
+        if students_db[name] == password:
+            return jsonify({"status": "success", "message": "Sign-in successful"}), 200
+        return jsonify({"error": "Incorrect password"}), 401
+    
     students_db[name] = password
-    return jsonify({"status": "Success"}), 201
+    save_record("students_records.txt", f"{name}:{password}")
+    return jsonify({"status": "success", "message": "Registration successful"}), 201
 
-@student_bp.route('/students/login', methods=['POST'])
-def login_std():
-    data = request.json
-    if students_db.get(data.get('name')) == data.get('password'):
-        return jsonify({"status": "success"}), 200
-    return jsonify({"error": "Invalid login"}), 401
-
-# --- BLUEPRINT: RIDERS ---
 riders_bp = Blueprint('riders', __name__)
-@riders_bp.route('/register', methods=['POST'])
-def reg_rid():
+@riders_bp.route('/auth', methods=['POST'])
+def auth_rider():
     data = request.json
-    name, plate = data.get('name', ''), data.get('plate', '').upper()
+    name, id_num = data.get('name', ''), str(data.get('id_number', ''))
+    plate = data.get('plate', '').upper()
+
+    rider_exists = next((r for r in riders_db if r['id'] == id_num), None)
+    if rider_exists:
+        return jsonify({"status": "success", "message": "Rider signed in"}), 200
+
     if len(name.split()) != 3: return jsonify({"error": "Need 3 names"}), 400
     if not re.match(r"^KM[A-Z]{2}[1-9][0-9]{2}[A-Z]$", plate):
-        return jsonify({"error": "Invalid Plate (Format: KMGS567M)"}), 400
-    new_rider = {"name": name, "plate": plate, "id": data.get('id_number'), "status": "available"}
+        return jsonify({"error": "Invalid Plate (KMGS567M)"}), 400
+    
+    new_rider = {"name": name, "plate": plate, "id": id_num, "status": "available"}
     riders_db.append(new_rider)
-    return jsonify({"status": "Success"}), 201
+    save_record("riders_records.txt", f"{name},{plate},{id_num}")
+    return jsonify({"status": "success", "message": "Rider registered"}), 201
 
-# --- BLUEPRINT: PAYMENTS & LOYALTY ---
-pay_bp = Blueprint('payments', __name__)
-@pay_bp.route('/stk_push', methods=['POST'])
-def process_pay():
+# --- 5. PAYMENT & COMMUNICATION ---
+@app.route('/stk_push', methods=['POST'])
+def process_ride_payment():
     data = request.json
     phone, amount = data.get('phone'), data.get('amount')
-    std_name, rid_id = data.get('student_name'), data.get('rider_id')
-    
+    std_name = data.get('student_name')
+
     student_ride_counts[std_name] = student_ride_counts.get(std_name, 0) + 1
-    rider_ride_counts[rid_id] = rider_ride_counts.get(rid_id, 0) + 1
     
     token = get_access_token()
     timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
     pass_str = DARAJA_SHORTCODE + DARAJA_PASSKEY + timestamp
     password = base64.b64encode(pass_str.encode()).decode()
-    
+
     payload = {
         "BusinessShortCode": DARAJA_SHORTCODE, "Password": password, "Timestamp": timestamp,
         "TransactionType": "CustomerPayBillOnline", "Amount": amount,
         "PartyA": phone, "PartyB": DARAJA_SHORTCODE, "PhoneNumber": phone,
         "CallBackURL": "https://yourdomain.com/callback",
-        "AccountReference": f"Ride_{std_name}", "TransactionDesc": "Pay for ride with Kutus Boda App"
+        "AccountReference": f"Ride_{std_name}", "TransactionDesc": "Kutus Boda Pay"
     }
-    res = requests.post("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest", 
-                        json=payload, headers={"Authorization": f"Bearer {token}"})
-    
-    v_msg = "Keep riding for a 200/- voucher!"
-    if student_ride_counts.get(std_name, 0) >= 15: v_msg = "CONGRATS! 200/- Voucher Earned!"
-    
-    return jsonify({"mpesa_status": "Prompt Sent", "voucher_info": v_msg})
+    requests.post("https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+                  json=payload, headers={"Authorization": f"Bearer {token}"})
 
-# --- MAIN APP ROUTES ---
+    v_msg = "Keep riding for a 200/- voucher!"
+    if student_ride_counts[std_name] >= 15: v_msg = "CONGRATS! 200/- Voucher Earned!"
+
+    return jsonify({"mpesa_status": "Prompt Sent", "commission": MY_COMMISSION, "voucher_info": v_msg})
+
+@app.route('/send_request', methods=['POST'])
+def send_request():
+    data = request.json
+    pending_requests.append(data)
+    return jsonify({"status": "sent"}), 200
+
+@app.route('/get_requests')
+def get_requests():
+    return jsonify(pending_requests)
+
 @app.route('/calculate_fare', methods=['POST'])
 def fare():
     data = request.json
@@ -106,12 +136,11 @@ def fare():
 
 @app.route('/check_riders')
 def check():
-    available = any(r['status'] == 'available' for r in riders_db)
-    return jsonify({"available": available})
+    return jsonify({"available": len(riders_db) > 0})
 
 app.register_blueprint(student_bp)
 app.register_blueprint(riders_bp, url_prefix='/riders')
-app.register_blueprint(pay_bp)
 
 if __name__ == '__main__':
+    reload_records()
     app.run(host='0.0.0.0', port=10000)
