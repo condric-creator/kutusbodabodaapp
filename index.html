@@ -5,31 +5,29 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@500;800&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        :root { --neon: #00ffa3; --dark-card: #0a0f1d; --bg: #05070a; --red: #ff4757; }
+        :root { --neon: #00ffa3; --dark-card: #0a0f1d; --bg: #05070a; --red: #ff4757; --gray: #64748b; }
         body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: #f1f5f9; }
         .screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; }
         .active { display: flex; }
         
-        /* LOGIN/SIGNUP STYLING */
-        .auth-container { background: var(--dark-card); padding: 40px; border-radius: 30px; width: 100%; max-width: 400px; border: 1px solid var(--neon); text-align: center; color: white; box-shadow: 0 0 20px rgba(0,255,163,0.1); }
-        .tab-box { display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 15px; }
+        .auth-container { background: var(--dark-card); padding: 40px; border-radius: 30px; width: 100%; max-width: 400px; border: 2px solid var(--neon); text-align: center; color: white; box-shadow: 0 0 30px rgba(0, 255, 163, 0.2); }
+        .tab-box { display: flex; gap: 10px; margin-bottom: 25px; background: rgba(255,255,255,0.05); padding: 5px; border-radius: 15px; }
         .tab-btn { flex: 1; padding: 12px; border: none; border-radius: 12px; cursor: pointer; font-weight: 800; background: transparent; color: white; }
         .tab-btn.active-tab { background: var(--neon); color: var(--dark-card); }
         
-        input { width: 100%; padding: 16px; margin: 10px 0; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 16px; outline: none; box-sizing: border-box; }
-        input:focus { border-color: var(--neon); }
+        input { width: 100%; padding: 16px; margin: 10px 0; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: white; font-size: 16px; box-sizing: border-box; }
+        input:focus { border-color: var(--neon); outline: none; }
 
-        .btn-main { width: 100%; padding: 18px; background: var(--neon); color: var(--dark-card); border: none; border-radius: 16px; font-weight: 800; cursor: pointer; font-family: 'Orbitron'; margin-top: 10px; }
+        .btn-main { width: 100%; padding: 18px; background: var(--neon); color: var(--dark-card); border: none; border-radius: 16px; font-weight: 800; cursor: pointer; font-family: 'Orbitron'; margin-top: 10px; text-transform: uppercase; }
         .btn-outline { width: 100%; padding: 15px; background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); border-radius: 16px; font-weight: 700; cursor: pointer; margin-top: 10px; }
-
-        /* PORTAL STYLING */
-        .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; background: white; border-bottom: 4px solid var(--neon); position: fixed; top: 0; z-index: 1000; box-sizing: border-box; }
-        .btn-loc { background: white; border: 2px solid var(--neon); padding: 18px; border-radius: 15px; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; width: 100%; }
+        .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 15px 25px; background: white; border-bottom: 4px solid var(--neon); position: fixed; top: 0; left: 0; box-sizing: border-box; z-index: 1000; }
+        
+        .btn-loc { background: white; border: 2px solid var(--neon); padding: 18px; border-radius: 15px; font-family: 'Orbitron'; font-weight: 900; cursor: pointer; width: 100%; margin-top:10px; }
         .rider-card { background: white; padding: 15px; border-radius: 20px; border: 2px solid #e2e8f0; text-align: center; cursor: pointer; }
-        .selected-rider { border-color: var(--neon); background: #f0fffb; transform: scale(1.02); }
+        .selected-rider { border-color: var(--neon); background: #f0fffb; }
 
-        /* PAYMENT MODAL */
-        #payment-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center; }
+        #payment-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; align-items:center; justify-content:center; }
+        .request-notif { background: #f8fafc; border: 2px solid var(--neon); padding: 20px; border-radius: 20px; margin-top: 20px; width: 100%; text-align: left; }
     </style>
 </head>
 <body>
@@ -38,31 +36,28 @@
         <div class="auth-container">
             <h1 style="font-family:Orbitron; color:var(--neon); margin:0;">KUTUS BODA APP</h1>
             <p style="font-size: 11px; letter-spacing: 3px; margin-bottom: 25px; color: var(--neon);">TRUSTED RIDE</p>
-            
             <div class="tab-box">
                 <button id="tab-st" class="tab-btn active-tab" onclick="setRole('student')">STUDENT</button>
                 <button id="tab-rd" class="tab-btn" onclick="setRole('rider')">RIDER</button>
             </div>
-
             <input id="auth-name" placeholder="Full Name">
             <input id="auth-pass" type="password" placeholder="Password">
             <div id="rider-fields" style="display:none;">
                 <input id="auth-plate" placeholder="Motorbike Plate (KMG...)">
+                <input id="auth-id" type="number" placeholder="National ID Number">
             </div>
-
             <button class="btn-main" onclick="enterPortal()">SIGN IN</button>
-            <button class="btn-outline" onclick="alert('Account creation logic linked to OODA Database')">SIGN UP</button>
         </div>
     </div>
 
     <div id="student-portal" class="screen" style="padding-top: 100px;">
         <div class="header">
-            <div style="font-family:Orbitron; font-weight:bold;">TRUSTED RIDE</div>
+            <div style="font-family:Orbitron; font-weight:bold;">STUDENT PORTAL</div>
             <div style="color:var(--red); cursor:pointer; font-weight:bold;" onclick="logout()">LOGOUT</div>
         </div>
-
         <div style="width:100%; max-width:500px;">
-            <h3>1. Select your Rider</h3>
+            <p id="loc-status" style="font-size: 12px; color: var(--gray); text-align: center;">Locating student...</p>
+            <h3>1. Choose your Rider</h3>
             <div id="rider-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
                 <div class="rider-card" onclick="pickRider('KMGX654J', this)">
                     <span style="font-size:30px">🏍️</span><br><b>Emmaya</b><br><small>KMGX654J</small>
@@ -71,45 +66,54 @@
                     <span style="font-size:30px">🏍️</span><br><b>DCSC</b><br><small>KMGH421X</small>
                 </div>
             </div>
-
             <h3>2. Destination</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:10px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
                 <button class="btn-loc" onclick="openPayment('SPENZA')">SPENZA</button>
                 <button class="btn-loc" onclick="openPayment('SCHOOL')">SCHOOL</button>
                 <button class="btn-loc" onclick="openPayment('RAHA')">RAHA</button>
-                <button class="btn-loc" onclick="openPayment('NGOMONGO')">NGOMONGO</button>
-                <button class="btn-loc" onclick="openPayment('ICON')" style="grid-column: span 2; border-width: 4px;">ICON</button>
+                <button class="btn-loc" onclick="openPayment('ICON')" style="grid-column: span 2;">ICON</button>
             </div>
         </div>
     </div>
 
     <div id="rider-portal" class="screen" style="padding-top: 100px;">
         <div class="header">
-            <div style="font-family:Orbitron; font-weight:bold;">RIDER CONSOLE</div>
+            <div style="font-family:Orbitron; font-weight:bold;">RIDER PORTAL</div>
             <div style="color:var(--red); cursor:pointer; font-weight:bold;" onclick="logout()">LOGOUT</div>
         </div>
-        <div class="auth-container" style="background:white; color:black;">
-            <h2 id="r-name">Hi Rider</h2>
-            <button class="btn-main" onclick="this.innerText='ONLINE'; this.style.background='#00ffa3'">GO ONLINE</button>
+        <div class="auth-container" style="background:white; color:black; border: 2px solid #e2e8f0;">
+            <h2 id="r-name" style="margin-bottom:5px;">Rider Name</h2>
+            <p id="r-plate-display" style="color:var(--gray); margin-top:0; font-size:14px;"></p>
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button class="btn-main" id="btn-avail" onclick="updateRiderStatus('available')" style="background:#00ffa3">AVAILABLE</button>
+                <button class="btn-main" id="btn-unavail" onclick="updateRiderStatus('unavailable')" style="background:#e2e8f0; color: #64748b;">UNAVAILABLE</button>
+            </div>
+            <div id="incoming-request" style="display:none;" class="request-notif">
+                <h4 style="margin:0; color:var(--red);">NEW REQUEST!</h4>
+                <p id="req-dest" style="margin:5px 0; font-weight:bold;"></p>
+                <a id="map-link" target="_blank" style="color:blue; text-decoration:underline; font-size:14px; font-weight:bold;">OPEN NAVIGATION MAP</a>
+            </div>
         </div>
     </div>
 
     <div id="payment-modal">
         <div class="auth-container" style="max-width:340px;">
             <h2 style="font-family:Orbitron; color:var(--neon);">MPESA PAY</h2>
-            <p style="font-size:12px;">Payment for trip to <span id="pay-dest" style="color:var(--neon)"></span></p>
-            
-            <input id="mpesa-num" type="number" placeholder="2547XXXXXXXX" style="text-align:center; font-size:18px; letter-spacing:1px; border: 2px solid var(--neon);">
-            
-            <button class="btn-main" onclick="processSTK()">CONFIRM & PAY</button>
-            <p onclick="document.getElementById('payment-modal').style.display='none'" style="margin-top:15px; cursor:pointer; font-size:12px;">Cancel</p>
+            <p style="font-size:12px;">Enter number to pay & request for <span id="pay-dest" style="color:var(--neon)"></span></p>
+            <input id="mpesa-num" type="number" placeholder="2547XXXXXXXX" style="text-align:center;">
+            <button class="btn-main" onclick="processSTK()">PAY & REQUEST</button>
+            <button class="btn-outline" style="border-color:var(--red); color:var(--red);" onclick="closePay()">CANCEL</button>
         </div>
     </div>
 
     <script>
+        const API_URL = "http://127.0.0.1:10000";
         let role = 'student';
         let riderSelected = null;
         let destSelected = '';
+        let studentLat = null;
+        let studentLon = null;
+        let currentRiderPlate = "";
 
         function setRole(r) {
             role = r;
@@ -121,11 +125,28 @@
         function enterPortal() {
             const name = document.getElementById('auth-name').value;
             if(!name) return alert("Enter Name");
+            
             document.getElementById('auth-scr').classList.remove('active');
-            if(role === 'student') document.getElementById('student-portal').classList.add('active');
-            else {
+            if(role === 'student') {
+                document.getElementById('student-portal').classList.add('active');
+                getLocation();
+            } else {
+                currentRiderPlate = document.getElementById('auth-plate').value.toUpperCase();
                 document.getElementById('rider-portal').classList.add('active');
-                document.getElementById('r-name').innerText = "Hi, " + name;
+                document.getElementById('r-name').innerText = name;
+                document.getElementById('r-plate-display').innerText = "Plate: " + currentRiderPlate;
+            }
+        }
+
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    studentLat = pos.coords.latitude;
+                    studentLon = pos.coords.longitude;
+                    document.getElementById('loc-status').innerText = `Location Active: ${studentLat.toFixed(4)}, ${studentLon.toFixed(4)}`;
+                }, (err) => {
+                    alert("Please enable GPS/Location to request a ride.");
+                });
             }
         }
 
@@ -141,31 +162,92 @@
         }
 
         function openPayment(dest) {
-            if(!riderSelected) return alert("Error: You must pick a rider first!");
+            if(!riderSelected) return alert("Must choose a rider first!");
             destSelected = dest;
             document.getElementById('pay-dest').innerText = dest;
             document.getElementById('payment-modal').style.display = 'flex';
         }
 
+        function closePay() { document.getElementById('payment-modal').style.display = 'none'; }
+
+        /* CONNECTIVITY: SEND REQUEST TO BACKEND */
         async function processSTK() {
             const num = document.getElementById('mpesa-num').value;
-            if(!num || num.length < 10) return alert("Enter valid number starting with 254...");
-            
-            // Logic to link with your Python OODA Project
+            if(!num) {
+                alert("No confirmation message: Payment number required to send request!");
+                return;
+            }
+
+            const payload = {
+                phone: num,
+                rider_plate: riderSelected,
+                destination: destSelected,
+                lat: studentLat,
+                lon: studentLon
+            };
+
             try {
-                const res = await fetch('http://127.0.0.1:10000/stk', {
+                const response = await fetch(`${API_URL}/send_request`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ phone: num, destination: destSelected, plate: riderSelected })
+                    body: JSON.stringify(payload)
                 });
-                const data = await res.json();
-                if(data.CheckoutRequestID) alert("STK PUSH SENT! Enter your PIN on your phone screen.");
-                else alert("M-Pesa Error: " + data.errorMessage);
-            } catch (e) {
-                alert("Connection Failed: Ensure your Python backend is running for your OODA project!");
+                
+                if(response.ok) {
+                    alert("Payment Processed. Request sent to " + riderSelected);
+                    closePay();
+                } else {
+                    alert("Error sending request to server.");
+                }
+            } catch (error) {
+                alert("Backend Connection Failed. Make sure Flask is running!");
             }
-            document.getElementById('payment-modal').style.display='none';
         }
+
+        /* CONNECTIVITY: RIDER STATUS TOGGLE */
+        async function updateRiderStatus(status) {
+            const btnAvail = document.getElementById('btn-avail');
+            const btnUnavail = document.getElementById('btn-unavail');
+
+            if(status === 'available') {
+                btnAvail.style.background = '#00ffa3';
+                btnUnavail.style.background = '#e2e8f0';
+                btnUnavail.style.color = '#64748b';
+            } else {
+                btnAvail.style.background = '#e2e8f0';
+                btnUnavail.style.background = '#ff4757';
+                btnUnavail.style.color = 'white';
+                document.getElementById('incoming-request').style.display = 'none';
+            }
+
+            try {
+                await fetch(`${API_URL}/update_status`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ plate: currentRiderPlate, status: status })
+                });
+            } catch (e) { console.log("Status update failed"); }
+        }
+
+        /* CONNECTIVITY: RIDER MAP & POLLING */
+        async function checkIncomingRequests() {
+            if(role !== 'rider' || !currentRiderPlate) return;
+
+            try {
+                const response = await fetch(`${API_URL}/get_requests?plate=${currentRiderPlate}`);
+                const data = await response.json();
+
+                if(data.length > 0) {
+                    const latest = data[data.length - 1];
+                    document.getElementById('incoming-request').style.display = 'block';
+                    document.getElementById('req-dest').innerText = "To: " + latest.destination;
+                    document.getElementById('map-link').href = latest.map_url;
+                }
+            } catch (e) { console.log("Polling error"); }
+        }
+
+        // Poll for new requests every 4 seconds
+        setInterval(checkIncomingRequests, 4000);
     </script>
 </body>
 </html>
