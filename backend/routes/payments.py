@@ -56,7 +56,7 @@ def process_ride_payment():
         "PartyB": DARAJA_SHORTCODE,
         "PhoneNumber": phone,
         "CallBackURL": "https://mydomain.com/callback",
-        "AccountReference": f"Ride_{student_name}",
+        "AccountReference": "Kutus Boda APP ",
         "TransactionDesc": "Kutus Boda Payment"
     }
 
