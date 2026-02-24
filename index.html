@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Kutus Boda App | Direct Dispatch</title>
+    <title>Kutus Boda | Direct Dispatch Pro</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@500;800&display=swap" rel="stylesheet">
     <style>
         :root { --neon: #00ffa3; --dark: #0a0f1d; --light-bg: #f1f5f9; --red: #ff4757; }
@@ -11,16 +11,21 @@
         
         /* UI Components */
         .glass-card { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 25px; width: 100%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
-        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.1); color: white; box-sizing: border-box; font-size: 16px; }
-        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.1); color: white; box-sizing: border-box; font-size: 16px; outline: none; }
+        input:focus { border: 1px solid var(--neon); }
         
+        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .btn-outline { background: transparent; border: 2px solid white; color: white; margin-top: 10px; }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
         /* Header */
         .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: white; color: var(--dark); position: fixed; top: 0; z-index: 10; border-bottom: 3px solid var(--neon); height: 70px; box-sizing: border-box; }
         
         /* Rider Cards */
         #rider-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-top: 15px; }
-        .rider-card { padding:15px; border-radius:15px; border:2px solid #eee; text-align:center; background:white; cursor:pointer; color: black; transition: 0.2s; }
+        .rider-card { padding:15px; border-radius:15px; border:2px solid #eee; text-align:center; background:white; cursor:pointer; color: black; transition: 0.2s; position: relative; }
         .selected-rider { border-color: var(--neon); background: #e6fff7; transform: scale(1.02); box-shadow: 0 5px 15px rgba(0,255,163,0.2); }
+        .selected-rider::after { content: '✓'; position: absolute; top: 5px; right: 10px; color: var(--neon); font-weight: bold; }
         
         #pay-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; justify-content:center; align-items:center; padding: 20px; }
     </style>
@@ -29,27 +34,36 @@
 
     <div id="auth-scr" class="screen active" style="justify-content: center;">
         <div class="glass-card">
-            <h1 style="font-family:Orbitron; color:var(--neon); text-align:center;">KUTUS BODA</h1>
+            <h1 style="font-family:Orbitron; color:var(--neon); text-align:center; margin-bottom: 20px;">KUTUS BODA</h1>
+            
             <div style="display:flex; gap:10px; margin-bottom:20px;">
-                <button id="tab-st" onclick="setRole('student')" style="flex:1; padding:10px; border-radius:10px; border:none; background:var(--neon); font-weight:bold;">STUDENT</button>
-                <button id="tab-rd" onclick="setRole('rider')" style="flex:1; padding:10px; border-radius:10px; border:none; background:white; font-weight:bold;">RIDER</button>
+                <button id="tab-st" onclick="setRole('student')" style="flex:1; padding:12px; border-radius:12px; border:none; background:var(--neon); font-weight:800; cursor:pointer;">STUDENT</button>
+                <button id="tab-rd" onclick="setRole('rider')" style="flex:1; padding:12px; border-radius:12px; border:none; background:white; font-weight:800; cursor:pointer;">RIDER</button>
             </div>
             
             <input id="auth-name" placeholder="Full Name">
             <input id="auth-pass" type="password" placeholder="Password">
+            
             <div id="rd-fields" style="display:none;">
                 <input id="auth-plate" placeholder="Motorbike Plate (KMGS...)">
+                <input id="auth-id" placeholder="ID Number">
             </div>
 
-            <button class="btn" onclick="handleAuth()" style="margin-top:10px;">ENTER SYSTEM</button>
-            <p style="font-size:10px; text-align:center; margin-top:10px; color:#aaa;">New users are automatically registered.</p>
+            <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+                <button class="btn" onclick="handleAuth('login')">SIGN IN</button>
+                <button class="btn btn-outline" onclick="handleAuth('signup')">SIGN UP</button>
+            </div>
+            <p id="auth-error" style="color:var(--red); font-size:12px; text-align:center; margin-top:10px;"></p>
         </div>
     </div>
 
     <div id="dash" class="screen" style="background: var(--light-bg); color: black;">
         <div class="header">
-            <h3 style="margin:0; font-family:Orbitron;">KUTUS BODA</h3>
-            <button onclick="handleLogout()" style="color:var(--red); background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
+            <h3 style="margin:0; font-family:Orbitron; font-size:16px;">KUTUS BODA</h3>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <span id="user-display" style="font-weight:bold; font-size:12px;"></span>
+                <button onclick="handleLogout()" style="color:var(--red); background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
+            </div>
         </div>
         <div id="content" style="margin-top: 80px; width: 100%; max-width: 500px;"></div>
     </div>
@@ -57,9 +71,10 @@
     <div id="pay-modal">
         <div class="glass-card" style="background:white; color:black; width:100%; max-width:350px;">
             <h3 id="modal-dest">Confirm Ride</h3>
-            <p id="modal-fare" style="font-weight:bold; font-size: 24px; color: var(--dark);"></p>
+            <p id="modal-fare" style="font-weight:bold; font-size: 28px; color: var(--dark); margin: 10px 0;"></p>
+            <p style="font-size:12px; color:gray;">Pay to shortcode: 174379</p>
             <input id="mpesa-num" type="number" placeholder="2547..." style="background:#f1f5f9; color:black; border: 1px solid #ddd;">
-            <button class="btn" onclick="confirmAndSend()">SEND REQUEST</button>
+            <button class="btn" onclick="confirmAndSend()">PAY & REQUEST</button>
             <button onclick="closeModal()" style="width:100%; background:none; border:none; margin-top:10px; color:gray; cursor:pointer;">Cancel</button>
         </div>
     </div>
@@ -73,15 +88,36 @@
             document.getElementById('tab-st').style.background = r === 'student' ? '#00ffa3' : 'white';
             document.getElementById('tab-rd').style.background = r === 'rider' ? '#00ffa3' : 'white';
             document.getElementById('rd-fields').style.display = r === 'rider' ? 'block' : 'none';
+            document.getElementById('auth-error').innerText = "";
         }
 
-        async function handleAuth() {
-            user = document.getElementById('auth-name').value;
-            userPlate = document.getElementById('auth-plate').value;
-            if(!user) return alert("Enter Name");
-            
-            // In a real app, this sends to /auth/login. For now, we simulate entry:
-            showDash();
+        async function handleAuth(type) {
+            const name = document.getElementById('auth-name').value;
+            const pass = document.getElementById('auth-pass').value;
+            const plate = document.getElementById('auth-plate').value;
+            const idNum = document.getElementById('auth-id').value;
+            const errBox = document.getElementById('auth-error');
+
+            if(!name || !pass) return alert("Fill Name and Password");
+
+            const endpoint = type === 'signup' ? '/auth/signup' : '/auth/login';
+            try {
+                const res = await fetch(API + endpoint, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ role, name, password: pass, plate, id_number: idNum })
+                });
+                const data = await res.json();
+
+                if(res.ok) {
+                    user = name;
+                    userPlate = data.plate || plate; 
+                    document.getElementById('user-display').innerText = user.split(' ')[0];
+                    showDash();
+                } else {
+                    errBox.innerText = data.error || "Access Denied";
+                }
+            } catch (e) { errBox.innerText = "Backend Offline!"; }
         }
 
         async function handleLogout() {
@@ -102,32 +138,29 @@
             
             if(role === 'student') {
                 content.innerHTML = `
-                    <div style="background:white; padding:20px; border-radius:20px; margin-bottom:15px;">
-                        <h2 style="margin:0;">Pick a Rider</h2>
-                        <p style="font-size:12px; color:gray;">Requests go only to the rider you choose.</p>
+                    <div style="background:white; padding:20px; border-radius:25px; box-shadow:0 10px 30px rgba(0,0,0,0.05);">
+                        <h2 style="margin:0; font-size:20px;">Available Riders</h2>
+                        <p style="font-size:12px; color:gray; margin-bottom:15px;">Tap 1 rider to send them your request.</p>
                         <div id="rider-grid"></div>
                     </div>
-                    <div id="loc-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        ${['Spenza', 'School', 'Raha Premium', 'Ngomongo', 'Diaspora', 'Mjini', 'Icon'].map(loc => 
-                            `<button class="btn" onclick="openPayment('${loc}')" style="font-size:12px;">${loc}</button>`
-                        ).join('')}
+                    <div style="margin-top:25px;">
+                        <h4 style="margin-bottom:10px; font-family:Orbitron; font-size:12px;">WHERE TO?</h4>
+                        <div id="loc-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                            ${['Spenza', 'School', 'Raha Premium', 'Ngomongo', 'Diaspora', 'Mjini', 'Icon'].map(loc => 
+                                `<button class="btn" onclick="openPayment('${loc}')" style="font-size:12px; background:white; color:black; border:1px solid #ddd; box-shadow:none;">${loc}</button>`
+                            ).join('')}
+                        </div>
                     </div>
                 `;
                 setInterval(syncRiders, 3000);
             } else {
                 content.innerHTML = `
-                    <div style="background:white; padding:20px; border-radius:20px; border-left: 5px solid var(--neon);">
-                        <h3 style="margin:0;">${user} (ONLINE)</h3>
-                        <p style="font-size:12px; color:gray;">Plate: ${userPlate} | Waiting for direct requests...</p>
+                    <div style="background:white; padding:25px; border-radius:25px; border-left: 8px solid var(--neon);">
+                        <h3 style="margin:0;">Rider Portal: ${user}</h3>
+                        <p style="font-size:12px; color:gray;">Plate: ${userPlate} | Direct Dispatch Active</p>
                     </div>
                     <div id="my-requests" style="margin-top:20px;"></div>
                 `;
-                // Register rider as active
-                fetch(API + '/update_status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({name: user, plate: userPlate, status: 'available'})
-                });
                 setInterval(checkMyRequests, 3000);
             }
         }
@@ -139,20 +172,20 @@
             grid.innerHTML = riders.map(r => `
                 <div class="rider-card ${selectedRiderPlate === r.plate ? 'selected-rider' : ''}" 
                      onclick="selectOneRider('${r.plate}')">
-                    <span style="font-size:20px;">🏍️</span><br>
-                    <strong>${r.name}</strong><br>
-                    <small>${r.plate}</small>
+                    <span style="font-size:24px;">🏍️</span><br>
+                    <strong>${r.name.split(' ')[0]}</strong><br>
+                    <small style="color:gray;">${r.plate}</small>
                 </div>
             `).join('');
         }
 
         function selectOneRider(plate) {
             selectedRiderPlate = plate;
-            syncRiders(); // Refresh UI to show selection
+            syncRiders();
         }
 
         function openPayment(dest) {
-            if(!selectedRiderPlate) return alert("PLEASE SELECT A RIDER FIRST!");
+            if(!selectedRiderPlate) return alert("CRITICAL: CLICK 1 RIDER FIRST!");
             rideDetails = { student: user, destination: dest, fare: 50, rider_plate: selectedRiderPlate };
             document.getElementById('modal-dest').innerText = "Ride to " + dest;
             document.getElementById('modal-fare').innerText = "50 KES";
@@ -163,32 +196,36 @@
 
         async function confirmAndSend() {
             const phone = document.getElementById('mpesa-num').value;
-            if(!phone) return alert("Enter Phone");
+            if(!phone) return alert("Phone Required");
             
-            // Sending the request WITH the specific rider plate
             await fetch(API + '/send_request', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify(rideDetails) 
             });
-            alert("Request sent directly to Rider " + selectedRiderPlate);
+            alert("Sent! Waiting for " + selectedRiderPlate + " to arrive.");
             closeModal();
         }
 
         async function checkMyRequests() {
-            // We only ask for requests where "rider_plate" matches OUR plate
             const res = await fetch(`${API}/get_requests?plate=${userPlate}`);
             const requests = await res.json();
             const container = document.getElementById('my-requests');
             
             if(requests.length === 0) {
-                container.innerHTML = `<p style="text-align:center; color:gray;">No new requests yet.</p>`;
+                container.innerHTML = `<p style="text-align:center; color:#555; margin-top:50px;">Waiting for direct student requests...</p>`;
             } else {
                 container.innerHTML = requests.map(req => `
-                    <div style="background:white; padding:15px; border-radius:15px; margin-bottom:10px; border-left:5px solid var(--neon);">
-                        <strong>NEW JOB: ${req.student}</strong><br>
-                        Destination: ${req.destination}<br>
-                        Fare: ${req.fare} KES
+                    <div style="background:white; padding:20px; border-radius:20px; margin-bottom:15px; border-left:5px solid var(--neon); box-shadow:0 5px 15px rgba(0,0,0,0.05);">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>${req.student}</strong>
+                            <span style="color:var(--neon); font-weight:bold;">${req.fare}/-</span>
+                        </div>
+                        <div style="margin-top:10px; font-size:14px; color:#444;">
+                            📍 Destination: <b>${req.destination}</b><br>
+                            🕒 Requested: ${req.time}
+                        </div>
+                        <button class="btn" style="height:40px; padding:0; margin-top:15px; font-size:12px;">PICK UP NOW</button>
                     </div>
                 `).reverse().join('');
             }
