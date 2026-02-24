@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Kutus Boda App| trusted RIDE</title>
+    <title>Kutus Boda App | Trusted RIDE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@500;800&display=swap" rel="stylesheet">
     <style>
         :root { --neon: #00ffa3; --dark: #0a0f1d; --light-bg: #f1f5f9; --red: #ff4757; }
@@ -20,15 +20,14 @@
         /* Professional Header */
         .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: white; color: var(--dark); position: fixed; top: 0; z-index: 10; border-bottom: 3px solid var(--neon); box-sizing: border-box; height: 80px; }
         
-        /* LIVE RIDER RECTANGLE (The "Big Rectangle" next to Logout) */
+        /* LIVE RIDER RECTANGLE (Next to Logout) */
         .rider-status-panel { display: flex; align-items: center; gap: 15px; background: #f8fafc; border: 2px solid #ddd; padding: 5px 15px; border-radius: 15px; transition: 0.5s; min-width: 200px; }
         .glow-neon { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); }
         .glow-red { border-color: var(--red); box-shadow: 0 0 15px var(--red); }
         .bike-icon { font-size: 30px; }
         
-        /* Layout Grid for many riders */
-        #rider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; width: 100%; margin-top: 20px; }
-        
+        /* Layout Grid */
+        #rider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; width: 100%; margin-top: 15px; }
         .request-item { background: white; color: black; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid var(--neon); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
@@ -56,7 +55,7 @@
                     <div class="bike-icon">🏍️</div>
                     <div>
                         <div id="rect-plate" style="font-weight: 900; font-size: 14px;">NO RIDER</div>
-                        <div id="rect-status" style="font-size: 10px; text-transform: uppercase;">Unavailable</div>
+                        <div id="rect-status" style="font-size: 10px; text-transform: uppercase;">OFFLINE</div>
                     </div>
                 </div>
             </div>
@@ -108,24 +107,62 @@
                         <div id="rider-grid"></div>
                     </div>
                     <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                        <button class="btn loc-btn" onclick="requestRide('Spenza')" disabled>SPENZA</button>
-                        <button class="btn loc-btn" onclick="requestRide('School')" disabled style="background:white; color:black;">SCHOOL</button>
-                        <button class="btn loc-btn" onclick="requestRide('Mjini')" disabled style="background:white; color:black;">MJINI</button>
-                        <button class="btn loc-btn" onclick="requestRide('Icon')" disabled style="background:white; color:black;">ICON</button>
+                        <button class="btn loc-btn" onclick="requestRide('Spenza')">SPENZA</button>
+                        <button class="btn loc-btn" onclick="requestRide('School')">SCHOOL</button>
+                        <button class="btn loc-btn" onclick="requestRide('Raha Premium')">RAHA PREMIUM</button>
+                        <button class="btn loc-btn" onclick="requestRide('Ngomongo')">NGOMONGO</button>
+                        <button class="btn loc-btn" onclick="requestRide('Diaspora')">DIASPORA</button>
+                        <button class="btn loc-btn" onclick="requestRide('Icon')">ICON</button>
                     </div>
                 `;
                 setInterval(syncRiders, 3000);
             } else {
                 content.innerHTML = `
-                    <div class="glass-card" style="background:white; color:black; margin-bottom:20px;">
-                        <h3>Rider Control Panel</h3>
+                    <div class="glass-card" style="background:white; color:black; margin-bottom:20px; border-left: 5px solid var(--neon);">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <h3 style="margin:0;">RIDER PANEL</h3>
+                            <div style="background:var(--dark); color:var(--neon); padding:5px 12px; border-radius:10px; font-weight:900;">
+                                LIVE: <span id="active-count">0</span> ONLINE
+                            </div>
+                        </div>
                         <p>Toggle your visibility to students:</p>
                         <button id="toggle-btn" class="btn" onclick="toggleStatus()">GO UNAVAILABLE</button>
                     </div>
                     <div id="msgs"></div>
                 `;
+                setInterval(updateRiderStats, 5000);
+                updateRiderStats();
                 setInterval(checkRequests, 5000);
             }
+        }
+
+        async function requestRide(dest) {
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "LOCATING...";
+
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                
+                const res = await fetch(API + '/calculate_fare', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({lat: lat, lon: lon, destination: dest})
+                });
+                const data = await res.json();
+                
+                if (confirm(`Fare to ${dest}: ${data.total_fare} bob. Distance: ${data.distance}km. Proceed?`)) {
+                    await fetch(API + '/send_request', {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({student: user, to: dest, fare: data.total_fare})
+                    });
+                    alert("Request Sent!");
+                }
+                btn.innerText = originalText;
+            }, (err) => {
+                alert("Please enable GPS to book a ride.");
+                btn.innerText = originalText;
+            }, { enableHighAccuracy: true });
         }
 
         async function toggleStatus() {
@@ -133,12 +170,16 @@
             const btn = document.getElementById('toggle-btn');
             btn.innerText = currentRiderStatus === 'available' ? 'GO UNAVAILABLE' : 'GO AVAILABLE';
             btn.style.background = currentRiderStatus === 'available' ? 'var(--neon)' : 'var(--red)';
-            
-            // Send status update to backend
             await fetch(API + '/update_status', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({name: user, status: currentRiderStatus})
             });
+        }
+
+        async function updateRiderStats() {
+            const res = await fetch(API + '/rider_stats');
+            const data = await res.json();
+            document.getElementById('active-count').innerText = data.total_active;
         }
 
         async function syncRiders() {
@@ -151,32 +192,32 @@
             const locBtns = document.querySelectorAll('.loc-btn');
 
             if(riders.length > 0) {
-                const firstRider = riders[0]; // Display the main available rider in the rectangle
+                const firstRider = riders[0];
                 rectPlate.innerText = firstRider.plate;
-                rectStatus.innerText = firstRider.status;
-                
-                if(firstRider.status === 'available') {
-                    rect.className = "rider-status-panel glow-neon";
-                    locBtns.forEach(b => b.disabled = false);
-                    document.getElementById('global-status').style.display = 'none';
-                } else {
-                    rect.className = "rider-status-panel glow-red";
-                    locBtns.forEach(b => b.disabled = true);
-                }
+                rectStatus.innerText = "AVAILABLE";
+                rect.className = "rider-status-panel glow-neon";
+                locBtns.forEach(b => b.disabled = false);
+                document.getElementById('global-status').style.display = 'none';
 
                 grid.innerHTML = riders.map(r => `
-                    <div style="padding:10px; border-radius:10px; border:1px solid ${r.status === 'available' ? 'var(--neon)' : 'var(--red)'}; font-size:12px; text-align:center;">
+                    <div style="padding:10px; border-radius:10px; border:1px solid var(--neon); font-size:12px; text-align:center; background:white;">
                         <strong>${r.name.split(' ')[0]}</strong><br>${r.plate}
                     </div>
                 `).join('');
+            } else {
+                rectPlate.innerText = "NO RIDER";
+                rectStatus.innerText = "OFFLINE";
+                rect.className = "rider-status-panel glow-red";
+                locBtns.forEach(b => b.disabled = true);
+                document.getElementById('global-status').style.display = 'block';
+                grid.innerHTML = "";
             }
         }
 
-        // Standard Request/Payment Logic remains the same
         async function checkRequests() {
             const res = await fetch(API + '/get_requests');
             const data = await res.json();
-            document.getElementById('msgs').innerHTML = data.map(m => `<div class="request-item"><strong>${m.student}</strong> ➔ ${m.to}</div>`).reverse().join('');
+            document.getElementById('msgs').innerHTML = data.map(m => `<div class="request-item"><strong>${m.student}</strong> ➔ ${m.to} <br> <small>${m.fare} bob</small></div>`).reverse().join('');
         }
     </script>
 </body>
