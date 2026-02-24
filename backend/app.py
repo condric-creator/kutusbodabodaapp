@@ -23,7 +23,7 @@ KUTUS_LOCATIONS = {
 students_db = {} 
 riders_db = []
 student_ride_counts = {}
-pending_requests = [] # Real-time communication list
+pending_requests = [] 
 
 def save_record(filename, entry):
     with open(filename, "a") as f:
@@ -36,7 +36,8 @@ def reload_records():
                 parts = line.strip().split(" | ")
                 if len(parts) >= 2:
                     data = parts[1].split(":")
-                    students_db[data[0].strip()] = data[1].strip()
+                    if len(data) == 2:
+                        students_db[data[0].strip()] = data[1].strip()
     
     if os.path.exists("riders_records.txt"):
         with open("riders_records.txt", "r") as f:
@@ -44,7 +45,8 @@ def reload_records():
                 parts = line.strip().split(" | ")
                 if len(parts) >= 2:
                     r_data = parts[1].split(",")
-                    riders_db.append({"name": r_data[0], "plate": r_data[1], "id": r_data[2], "status": "available"})
+                    if len(r_data) == 3:
+                        riders_db.append({"name": r_data[0], "plate": r_data[1], "id": r_data[2], "status": "available"})
 
 # --- 3. DARAJA HELPERS ---
 def get_access_token():
@@ -52,7 +54,28 @@ def get_access_token():
     res = requests.get(url, auth=(CONSUMER_KEY, CONSUMER_SECRET))
     return res.json().get('access_token')
 
-# --- 4. BLUEPRINTS ---
+# --- 4. NEW STATUS & ACTIVE RIDER ROUTES ---
+
+@app.route('/get_active_riders')
+def get_active_riders():
+    # Only return riders who are currently "available" to show in the student dashboard grid
+    active_list = [r for r in riders_db if r.get('status') == 'available']
+    return jsonify(active_list)
+
+@app.route('/update_status', methods=['POST'])
+def update_status():
+    data = request.json
+    rider_name = data.get('name')
+    new_status = data.get('status') # 'available' or 'unavailable'
+
+    for rider in riders_db:
+        if rider['name'] == rider_name:
+            rider['status'] = new_status
+            return jsonify({"status": "success", "current_status": new_status}), 200
+            
+    return jsonify({"error": "Rider not found"}), 404
+
+# --- 5. BLUEPRINTS ---
 student_bp = Blueprint('student', __name__)
 @student_bp.route('/students/auth', methods=['POST'])
 def auth_student():
@@ -77,6 +100,8 @@ def auth_rider():
 
     rider_exists = next((r for r in riders_db if r['id'] == id_num), None)
     if rider_exists:
+        # Reset to available on new login
+        rider_exists['status'] = 'available'
         return jsonify({"status": "success", "message": "Rider signed in"}), 200
 
     if len(name.split()) != 3: return jsonify({"error": "Need 3 names"}), 400
@@ -88,7 +113,7 @@ def auth_rider():
     save_record("riders_records.txt", f"{name},{plate},{id_num}")
     return jsonify({"status": "success", "message": "Rider registered"}), 201
 
-# --- 5. PAYMENT & COMMUNICATION ---
+# --- 6. PAYMENT & COMMUNICATION ---
 @app.route('/stk_push', methods=['POST'])
 def process_ride_payment():
     data = request.json
@@ -113,7 +138,7 @@ def process_ride_payment():
                   json=payload, headers={"Authorization": f"Bearer {token}"})
 
     v_msg = "Keep riding for a 200/- voucher!"
-    if student_ride_counts[std_name] >= 15: v_msg = "CONGRATS! 200/- Voucher Earned!"
+    if student_ride_counts.get(std_name, 0) >= 15: v_msg = "CONGRATS! 200/- Voucher Earned!"
 
     return jsonify({"mpesa_status": "Prompt Sent", "commission": MY_COMMISSION, "voucher_info": v_msg})
 
@@ -136,7 +161,9 @@ def fare():
 
 @app.route('/check_riders')
 def check():
-    return jsonify({"available": len(riders_db) > 0})
+    # Count only riders who are currently "available"
+    available_riders = [r for r in riders_db if r.get('status') == 'available']
+    return jsonify({"available": len(available_riders) > 0})
 
 app.register_blueprint(student_bp)
 app.register_blueprint(riders_bp, url_prefix='/riders')

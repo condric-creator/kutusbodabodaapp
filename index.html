@@ -1,24 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kutus Boda App | Trusted Ride</title>
-    
+    <title>Kutus Boda App| trusted RIDE</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@500;800&display=swap" rel="stylesheet">
-    
     <style>
-        :root { --neon: #00ffa3; --dark: #0a0f1d; }
+        :root { --neon: #00ffa3; --dark: #0a0f1d; --light-bg: #f1f5f9; }
         body { margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; background: var(--dark); color: white; overflow-x: hidden; }
         .glass-card { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 25px; width: 100%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         .screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; }
         .active { display: flex; }
         input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.1); color: white; box-sizing: border-box; font-size: 16px; }
-        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.2s; box-shadow: 0 0 15px var(--neon); }
-        .header { width: 100%; display: flex; justify-content: space-between; padding: 15px; background: #fff; color: var(--dark); position: fixed; top: 0; z-index: 10; border-bottom: 3px solid var(--neon); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 100px; width: 100%; max-width: 500px; }
-        .loc-btn { background: white; color: black; padding: 25px; border-radius: 15px; text-align: center; font-weight: 800; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
-        #pay-modal { display: none; position: fixed; bottom: 0; width: 100%; background: white; color: black; padding: 30px; border-radius: 30px 30px 0 0; z-index: 100; }
+        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.2s; box-shadow: 0 0 15px var(--neon); text-transform: uppercase; }
+        .btn:disabled { background: #4b5563; box-shadow: none; cursor: not-allowed; opacity: 0.6; }
+        .header { width: 100%; display: flex; justify-content: space-between; padding: 15px; background: white; color: var(--dark); position: fixed; top: 0; z-index: 10; border-bottom: 3px solid var(--neon); box-sizing: border-box; }
+        #pay-modal { display: none; position: fixed; bottom: 0; width: 100%; background: white; color: black; padding: 30px; border-radius: 30px 30px 0 0; z-index: 100; box-sizing: border-box; box-shadow: 0 -10px 30px rgba(0,0,0,0.3); }
+        .request-item { background: white; color: black; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid var(--neon); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* New Styles for Live Riders */
+        .rider-chip { background: #e0fff4; color: #065f46; padding: 8px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; border: 1px solid var(--neon); margin: 5px; }
+        .status-pill { padding: 10px; border-radius: 12px; text-align: center; font-weight: 800; margin-bottom: 15px; font-size: 12px; transition: 0.3s; }
     </style>
 </head>
 <body>
@@ -27,173 +27,147 @@
         <div class="glass-card">
             <h1 style="font-family:Orbitron; color:var(--neon); text-align:center; margin-bottom:5px;">KUTUS BODA</h1>
             <p style="text-align:center; margin-top:0; font-size:12px; letter-spacing:2px; color:var(--neon); font-weight:bold;">TRUSTED RIDE</p>
-            
             <div style="display:flex; gap:10px; margin:20px 0;">
-                <button id="tab-st" onclick="setRole('student')" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--neon); font-weight:800; cursor:pointer;">Student</button>
-                <button id="tab-rd" onclick="setRole('rider')" style="flex:1; padding:12px; border-radius:10px; border:none; background:white; font-weight:800; cursor:pointer;">Rider</button>
+                <button id="tab-st" onclick="setRole('student')" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--neon); font-weight:800; cursor:pointer;">STUDENT</button>
+                <button id="tab-rd" onclick="setRole('rider')" style="flex:1; padding:12px; border-radius:10px; border:none; background:white; font-weight:800; cursor:pointer;">RIDER</button>
             </div>
-
-            <div id="auth-fields">
-                <input id="login-name" placeholder="Name">
-                <input id="login-pass" type="password" placeholder="Password">
-            </div>
-            <button class="btn" onclick="handleLogin()" style="margin-top:20px;">ENTER APP</button>
+            <div id="fields"><input id="name" placeholder="Username"><input id="pass" type="password" placeholder="Password"></div>
+            <button class="btn" onclick="handleAuth()" style="margin-top:20px;">LOGIN</button>
         </div>
     </div>
 
-    <div id="std-dash" class="screen" style="background:#f1f5f9; color:black; justify-content:start;">
+    <div id="dash" class="screen" style="background: var(--light-bg); color: black;">
         <div class="header">
             <h3 style="margin:0; font-family:Orbitron; color:var(--dark);">KUTUS BODA</h3>
-            <button onclick="logout()" style="color:red; background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
+            <button onclick="location.reload()" style="color:red; background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
         </div>
-        <div id="std-content" class="grid"></div>
-    </div>
-
-    <div id="rid-dash" class="screen" style="background:#f1f5f9; color:black; justify-content:start;">
-        <div class="header"><h3 style="font-family:Orbitron;">RIDER HUB</h3><button onclick="logout()" style="color:red; background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button></div>
-        <div style="margin-top:100px; background:white; padding:30px; border-radius:25px; width:90%; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
-            <h2 id="rid-user">RIDER</h2>
-            <button id="active-btn" class="btn" onclick="toggleActive()" style="background:#64748b; color:white;">GO ACTIVE</button>
-            <p style="font-size:11px; color:gray; margin-top:10px;">*Upload bike photo for verification</p>
-            <input type="file" accept="image/*" onchange="preview(event)" style="padding:10px; font-size:12px; background:#f1f5f9; color:black;">
-            <img id="bike-preview" style="width:100%; border-radius:15px; margin-top:15px; display:none; border:2px solid var(--neon);">
-        </div>
+        <div id="content" style="margin-top: 100px; width: 100%; max-width: 400px;"></div>
     </div>
 
     <div id="pay-modal">
-        <h2 style="margin:0; font-size:14px; color:gray;">TRIP FARE</h2>
+        <h2 style="margin:0; font-size:14px; color:gray;">fare</h2>
         <h1 id="fare-text" style="font-size:45px; margin:5px 0; color:var(--dark);">0 bob</h1>
         <input id="pay-phone" placeholder="M-Pesa (2547XXXXXXXX)" style="background:#f1f5f9; color:black; border:1px solid #ddd;">
         <button class="btn" onclick="triggerPayment()">PAY VIA M-PESA</button>
-        <button class="btn" style="background:#eee; color:black; margin-top:10px; box-shadow:none;" onclick="closePay()">Cancel Request</button>
+        <button class="btn" style="background:#eee; color:black; margin-top:10px; box-shadow:none;" onclick="document.getElementById('pay-modal').style.display='none'">CANCEL</button>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const API_BASE = "http://127.0.0.1:10000"; // Matched to your Backend Port
-        let currentRole = 'student', currentUserName = '', bikeUploaded = false;
-        const locations = ["Spenza", "Diaspora", "School", "Icon", "Mjini", "Soko"];
-
-        window.onload = () => {
-            const savedName = localStorage.getItem('kutus_name');
-            if(savedName) {
-                currentUserName = savedName;
-                currentRole = localStorage.getItem('kutus_role');
-                showDash();
-            }
-        };
+        const API = "http://127.0.0.1:10000";
+        let role = 'student', user = '';
 
         function setRole(r) {
-            currentRole = r;
-            document.getElementById('tab-st').style.background = r === 'student' ? 'var(--neon)' : 'white';
-            document.getElementById('tab-rd').style.background = r === 'rider' ? 'var(--neon)' : 'white';
-            document.getElementById('auth-fields').innerHTML = r === 'student' ? 
-                `<input id="login-name" placeholder="Name"><input id="login-pass" type="password" placeholder="Password">` :
-                `<input id="login-name" placeholder="Full Name (3 Names)"><input id="login-id" placeholder="ID Number"><input id="login-plate" placeholder="Bike Plate Number">`;
+            role = r;
+            document.getElementById('tab-st').style.background = r === 'student' ? '#00ffa3' : 'white';
+            document.getElementById('tab-rd').style.background = r === 'rider' ? '#00ffa3' : 'white';
+            document.getElementById('fields').innerHTML = r === 'student' ? 
+                `<input id="name" placeholder="Username"><input id="pass" type="password" placeholder="Password">` :
+                `<input id="name" placeholder="Full Name"><input id="id_num" placeholder="ID Number"><input id="plate" placeholder="Plate (KMGS567M)">`;
         }
 
-        async function handleLogin() {
-            currentUserName = document.getElementById('login-name').value;
-            // Updated paths to match Blueprints
-            const url = currentRole === 'student' ? '/students/register' : '/riders/register';
-            const body = currentRole === 'student' ? 
-                {name: currentUserName, password: document.getElementById('login-pass').value} : 
-                {name: currentUserName, id_number: document.getElementById('login-id').value, plate: document.getElementById('login-plate').value};
-            
+        async function handleAuth() {
+            user = document.getElementById('name').value;
+            const url = role === 'student' ? '/students/auth' : '/riders/auth';
+            const body = role === 'student' ? 
+                {name: user, password: document.getElementById('pass').value} :
+                {name: user, id_number: document.getElementById('id_num').value, plate: document.getElementById('plate').value};
+
             try {
-                const res = await fetch(`${API_BASE}${url}`, {
-                    method:'POST', 
-                    headers:{'Content-Type':'application/json'}, 
-                    body:JSON.stringify(body)
-                });
-                
-                if(res.ok) {
-                    localStorage.setItem('kutus_name', currentUserName);
-                    localStorage.setItem('kutus_role', currentRole);
-                    showDash();
-                } else { 
-                    const data = await res.json();
-                    alert(data.error || "Login Failed!"); 
-                }
-            } catch (err) {
-                alert("Cannot connect to Backend! Check if main.py is running on port 10000.");
-            }
+                const res = await fetch(API + url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+                if(res.ok) { showDash(); } else { const d = await res.json(); alert(d.error); }
+            } catch (e) { alert("Backend Offline! Start app.py"); }
         }
 
         function showDash() {
-            document.getElementById('auth-scr').style.display = 'none';
-            if(currentRole === 'student') {
-                document.getElementById('std-dash').classList.add('active');
-                document.getElementById('std-content').innerHTML = locations.map(l => `<div class="loc-btn" onclick="requestRide('${l}')">${l}</div>`).join('');
+            document.getElementById('auth-scr').classList.remove('active');
+            document.getElementById('dash').classList.add('active');
+            const content = document.getElementById('content');
+            
+            if(role === 'student') {
+                content.innerHTML = `
+                    <div id="status-pill" class="status-pill" style="background:#fee2e2; color:#991b1b;">OFFLINE: NO RIDERS AVAILABLE</div>
+                    
+                    <div style="background:white; padding:20px; border-radius:20px; margin-bottom:20px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);">
+                        <h2 style="margin:0;">Hello, ${user}!</h2>
+                        <div id="active-riders-list" style="margin-top:10px;"></div>
+                    </div>
+
+                    <div id="action-buttons">
+                        <button class="btn" onclick="requestRide('Spenza')" disabled>GO TO SPENZA</button>
+                        <button class="btn" style="margin-top:10px; background:white; color:black;" onclick="requestRide('School')" disabled>GO TO SCHOOL</button>
+                        <button class="btn" style="margin-top:10px; background:white; color:black;" onclick="requestRide('Diaspora')" disabled>GO TO DIASPORA</button>
+                        <button class="btn" style="margin-top:10px; background:white; color:black;" onclick="requestRide('Mjini')" disabled>GO TO MJINI</button>
+                    </div>
+                `;
+                // Start the Live Monitor
+                setInterval(monitorRiders, 3000);
+                monitorRiders(); 
             } else {
-                document.getElementById('rid-dash').classList.add('active');
-                document.getElementById('rid-user').innerText = currentUserName.split(' ')[0].toUpperCase();
+                content.innerHTML = `<h3>RIDER PORTAL</h3><div id="msgs"></div>`;
+                setInterval(checkMsgs, 5000);
             }
         }
 
+        async function monitorRiders() {
+            try {
+                const res = await fetch(API + '/get_active_riders'); // You need this route in app.py
+                const riders = await res.json();
+                const pill = document.getElementById('status-pill');
+                const list = document.getElementById('active-riders-list');
+                const btns = document.querySelectorAll('#action-buttons .btn');
+
+                if (riders.length > 0) {
+                    pill.style.background = "#dcfce7"; pill.style.color = "#166534";
+                    pill.innerText = `ACTIVE: ${riders.length} RIDERS ONLINE`;
+                    list.innerHTML = `<p style="font-size:12px; color:gray; margin-bottom:5px;">Available Bikes:</p>` + 
+                        riders.map(r => `<div class="rider-chip">🏍️ ${r.name.split(' ')[0]} | ${r.plate}</div>`).join('');
+                    btns.forEach(b => b.disabled = false);
+                } else {
+                    pill.style.background = "#fee2e2"; pill.style.color = "#991b1b";
+                    pill.innerText = "OFFLINE: NO RIDERS AVAILABLE";
+                    list.innerHTML = `<p style="font-size:12px; color:red;">Waiting for riders to log in...</p>`;
+                    btns.forEach(b => b.disabled = true);
+                }
+            } catch (e) { console.error("Monitor failed"); }
+        }
+
         async function requestRide(dest) {
-            const check = await fetch(`${API_BASE}/check_riders`);
-            const status = await check.json();
-            if(!status.available) {
-                alert("No riders are currently 'AM ACTIVE'. Request cannot be sent.");
-                return;
-            }
-            
             navigator.geolocation.getCurrentPosition(async (pos) => {
-                const res = await fetch(`${API_BASE}/calculate_fare`, {
-                    method:'POST', 
-                    headers:{'Content-Type':'application/json'}, 
+                const res = await fetch(API + '/calculate_fare', {
+                    method:'POST', headers:{'Content-Type':'application/json'}, 
                     body:JSON.stringify({lat:pos.coords.latitude, lon:pos.coords.longitude, destination:dest})
                 });
                 const data = await res.json();
                 document.getElementById('fare-text').innerText = data.total_fare + " bob";
                 document.getElementById('pay-modal').style.display = 'block';
+                fetch(API + '/send_request', {
+                    method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({student: user, to: dest, fare: data.total_fare, time: new Date().toLocaleTimeString()})
+                });
             });
         }
 
         async function triggerPayment() {
             const phone = document.getElementById('pay-phone').value;
             const amount = parseInt(document.getElementById('fare-text').innerText);
-            
-            // Updated to match your Payments Blueprint logic
-            const res = await fetch(`${API_BASE}/stk_push`, {
-                method:'POST', 
-                headers:{'Content-Type':'application/json'}, 
-                body:JSON.stringify({
-                    phone: phone, 
-                    amount: amount,
-                    student_name: currentUserName,
-                    rider_id: "KUTUS_RIDER_01" // Dynamic in a real scenario
-                })
+            const res = await fetch(API + '/stk_push', {
+                method:'POST', headers:{'Content-Type':'application/json'}, 
+                body:JSON.stringify({phone: phone, amount: amount, student_name: user})
             });
+            const d = await res.json();
+            alert(d.mpesa_status);
+            document.getElementById('pay-modal').style.display = 'none';
+        }
+
+        async function checkMsgs() {
+            const res = await fetch(API + '/get_requests');
             const data = await res.json();
-            alert(data.mpesa_status + "\n" + (data.voucher_info || ""));
-            closePay();
+            if(data.length > 0) {
+                document.getElementById('msgs').innerHTML = data.map(m => 
+                    `<div class="request-item"><strong>${m.student}</strong> ➔ ${m.to}<br><small>${m.fare} bob | ${m.time}</small></div>`
+                ).reverse().join('');
+            }
         }
-
-        function preview(e) {
-            const r = new FileReader();
-            r.onload = () => { 
-                document.getElementById('bike-preview').src = r.result; 
-                document.getElementById('bike-preview').style.display = 'block';
-                bikeUploaded = true;
-            };
-            r.readAsDataURL(e.target.files[0]);
-        }
-
-        async function toggleActive() {
-            if(!bikeUploaded) return alert("Upload bike photo first!");
-            const btn = document.getElementById('active-btn');
-            const isActivating = btn.innerText === "GO ACTIVE";
-            
-            // Note: Update status endpoint
-            btn.innerText = isActivating ? "AM ACTIVE" : "GO ACTIVE";
-            btn.style.background = isActivating ? "var(--neon)" : "#64748b";
-            btn.style.color = isActivating ? "black" : "white";
-        }
-
-        function logout() { localStorage.clear(); location.reload(); }
-        function closePay() { document.getElementById('pay-modal').style.display = 'none'; }
     </script>
 </body>
 </html>
