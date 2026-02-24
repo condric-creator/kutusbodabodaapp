@@ -1,0 +1,16 @@
+{
+  "name": "Kutus Boda App",
+  "short_name": "KutusBoda",
+  "description": "Trusted Ride - Premium Boda Logistics",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#0a0f1d",
+  "theme_color": "#00ffa3",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3198/3198336.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
