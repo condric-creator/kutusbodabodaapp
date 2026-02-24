@@ -9,26 +9,21 @@
         .screen { display: none; min-height: 100vh; flex-direction: column; align-items: center; padding: 20px; box-sizing: border-box; }
         .active { display: flex; }
         
-        /* Glass Login Card */
         .glass-card { background: rgba(255,255,255,0.05); padding: 30px; border-radius: 25px; width: 100%; max-width: 380px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
         input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: none; background: rgba(255,255,255,0.1); color: white; box-sizing: border-box; font-size: 16px; }
         
-        /* Neon Buttons */
-        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px var(--neon); text-transform: uppercase; }
-        .btn:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; color: #64748b; }
+        .btn { width: 100%; padding: 18px; background: var(--neon); color: var(--dark); border: none; border-radius: 15px; font-weight: 900; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px var(--neon); text-transform: uppercase; margin-bottom: 5px; }
+        .btn:hover { transform: translateY(-2px); opacity: 0.9; }
 
-        /* Professional Header */
         .header { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: white; color: var(--dark); position: fixed; top: 0; z-index: 10; border-bottom: 3px solid var(--neon); box-sizing: border-box; height: 80px; }
-        
-        /* LIVE RIDER RECTANGLE (Next to Logout) */
         .rider-status-panel { display: flex; align-items: center; gap: 15px; background: #f8fafc; border: 2px solid #ddd; padding: 5px 15px; border-radius: 15px; transition: 0.5s; min-width: 200px; }
         .glow-neon { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); }
-        .glow-red { border-color: var(--red); box-shadow: 0 0 15px var(--red); }
-        .bike-icon { font-size: 30px; }
         
-        /* Layout Grid */
         #rider-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; width: 100%; margin-top: 15px; }
-        .request-item { background: white; color: black; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid var(--neon); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .rider-card { padding:10px; border-radius:10px; border:1px solid #ddd; font-size:12px; text-align:center; background:white; cursor:pointer; transition:0.3s; color: black; }
+        .selected-rider { background: var(--neon) !important; color: var(--dark) !important; transform: scale(1.05); border: 2px solid var(--dark) !important; font-weight: bold; }
+
+        #pay-modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:1000; justify-content:center; align-items:center; padding: 20px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -36,7 +31,6 @@
     <div id="auth-scr" class="screen active" style="justify-content: center;">
         <div class="glass-card">
             <h1 style="font-family:Orbitron; color:var(--neon); text-align:center; margin-bottom:5px;">KUTUS BODA</h1>
-            <p style="text-align:center; margin-top:0; font-size:12px; letter-spacing:2px; color:var(--neon); font-weight:bold;">TRUSTED RIDE</p>
             <div style="display:flex; gap:10px; margin:20px 0;">
                 <button id="tab-st" onclick="setRole('student')" style="flex:1; padding:12px; border-radius:10px; border:none; background:var(--neon); font-weight:800; cursor:pointer;">STUDENT</button>
                 <button id="tab-rd" onclick="setRole('rider')" style="flex:1; padding:12px; border-radius:10px; border:none; background:white; font-weight:800; cursor:pointer;">RIDER</button>
@@ -49,26 +43,36 @@
     <div id="dash" class="screen" style="background: var(--light-bg); color: black;">
         <div class="header">
             <h3 style="margin:0; font-family:Orbitron; font-size: 14px;">KUTUS BODA</h3>
-            
-            <div id="status-container" style="display: none; align-items: center; gap: 10px;">
+            <div id="status-container" style="display: none; align-items: center;">
                 <div id="rider-rect" class="rider-status-panel">
-                    <div class="bike-icon">🏍️</div>
+                    <div style="font-size:30px;">🏍️</div>
                     <div>
                         <div id="rect-plate" style="font-weight: 900; font-size: 14px;">NO RIDER</div>
-                        <div id="rect-status" style="font-size: 10px; text-transform: uppercase;">OFFLINE</div>
+                        <div id="rect-status" style="font-size: 10px; text-transform: uppercase;">SELECT ONE</div>
                     </div>
                 </div>
             </div>
-
-            <button onclick="location.reload()" style="color:var(--red); background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
+            <button onclick="handleLogout()" style="color:var(--red); background:none; border:none; font-weight:bold; cursor:pointer;">LOGOUT</button>
         </div>
-
         <div id="content" style="margin-top: 100px; width: 100%; max-width: 500px;"></div>
+    </div>
+
+    <div id="pay-modal">
+        <div class="glass-card" style="background:white; color:black; width:100%; max-width:350px;">
+            <h3 id="modal-dest" style="margin-top:0;">Confirm Ride</h3>
+            <p id="modal-fare" style="font-weight:bold; color:var(--dark); font-size: 20px;"></p>
+            <p style="font-size:12px; color:gray;">Enter M-Pesa number (254...):</p>
+            <input id="mpesa-num" type="number" placeholder="254700000000" style="background:#eee; color:black;">
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn" onclick="confirmPayment()" style="flex:2;">PAY & REQUEST</button>
+                <button class="btn" onclick="closeModal()" style="flex:1; background:var(--red); box-shadow:none; color:white;">CANCEL</button>
+            </div>
+        </div>
     </div>
 
     <script>
         const API = "http://127.0.0.1:10000";
-        let role = 'student', user = '', currentRiderStatus = 'available';
+        let role = 'student', user = '', selectedRiderPlate = null, rideDetails = {}, currentRiderStatus = 'available';
 
         function setRole(r) {
             role = r;
@@ -84,12 +88,22 @@
             const url = role === 'student' ? '/students/auth' : '/riders/auth';
             const body = role === 'student' ? 
                 {name: user, password: document.getElementById('pass').value} :
-                {name: user, id_number: document.getElementById('id_num').value, plate: document.getElementById('plate').value, status: 'available'};
+                {name: user, id_number: document.getElementById('id_num').value, plate: document.getElementById('plate').value};
 
-            try {
-                const res = await fetch(API + url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
-                if(res.ok) { showDash(); } else { const d = await res.json(); alert(d.error); }
-            } catch (e) { alert("Backend Offline!"); }
+            const res = await fetch(API + url, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+            if(res.ok) { showDash(); } else { alert("Auth Failed"); }
+        }
+
+        async function handleLogout() {
+            if (role === 'rider' && user) {
+                // Force status to unavailable on server before clearing local state
+                await fetch(API + '/update_status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: user, status: 'unavailable'})
+                });
+            }
+            location.reload();
         }
 
         function showDash() {
@@ -100,124 +114,120 @@
             if(role === 'student') {
                 document.getElementById('status-container').style.display = 'flex';
                 content.innerHTML = `
-                    <div id="global-status" style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:10px; margin-bottom:15px; text-align:center; font-weight:800;">OFFLINE: NO RIDERS</div>
+                    <div id="global-status" style="background:#fee2e2; color:#991b1b; padding:10px; border-radius:10px; margin-bottom:15px; text-align:center; font-weight:800;">OFFLINE: NO RIDERS AVAILABLE</div>
                     <div style="background:white; padding:20px; border-radius:20px; box-shadow:0 4px 6px rgba(0,0,0,0.05);">
                         <h2 style="margin:0;">Hello, ${user}!</h2>
-                        <p style="color:gray;">Available Riders in Kutus:</p>
+                        <p style="color:gray; font-size:12px;">Step 1: Click 1 Rider below to select them.</p>
                         <div id="rider-grid"></div>
                     </div>
-                    <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div id="loc-grid" style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                         <button class="btn loc-btn" onclick="requestRide('Spenza')">SPENZA</button>
                         <button class="btn loc-btn" onclick="requestRide('School')">SCHOOL</button>
                         <button class="btn loc-btn" onclick="requestRide('Raha Premium')">RAHA PREMIUM</button>
                         <button class="btn loc-btn" onclick="requestRide('Ngomongo')">NGOMONGO</button>
                         <button class="btn loc-btn" onclick="requestRide('Diaspora')">DIASPORA</button>
+                        <button class="btn loc-btn" onclick="requestRide('Mjini')">MJINI</button>
                         <button class="btn loc-btn" onclick="requestRide('Icon')">ICON</button>
                     </div>
                 `;
                 setInterval(syncRiders, 3000);
             } else {
                 content.innerHTML = `
-                    <div class="glass-card" style="background:white; color:black; margin-bottom:20px; border-left: 5px solid var(--neon);">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h3 style="margin:0;">RIDER PANEL</h3>
-                            <div style="background:var(--dark); color:var(--neon); padding:5px 12px; border-radius:10px; font-weight:900;">
-                                LIVE: <span id="active-count">0</span> ONLINE
-                            </div>
+                    <div class="glass-card" style="background:white; color:black; margin-bottom:20px; border-left: 5px solid var(--neon); width:100%; box-sizing:border-box;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                            <h3 style="margin:0; font-size:16px;">RIDER: ${user}</h3>
+                            <div id="rider-badge" style="background:var(--neon); color:var(--dark); padding:5px 12px; border-radius:10px; font-weight:900; font-size:11px;">ONLINE</div>
                         </div>
-                        <p>Toggle your visibility to students:</p>
-                        <button id="toggle-btn" class="btn" onclick="toggleStatus()">GO UNAVAILABLE</button>
+                        <button id="toggle-btn" class="btn" onclick="toggleStatus()">GO OFFLINE (UNAVAILABLE)</button>
                     </div>
+                    <h4 style="color:white; font-family:Orbitron; font-size:12px; letter-spacing:2px;">INCOMING REQUESTS</h4>
                     <div id="msgs"></div>
                 `;
-                setInterval(updateRiderStats, 5000);
-                updateRiderStats();
-                setInterval(checkRequests, 5000);
+                setInterval(checkRequests, 3000);
             }
         }
 
-        async function requestRide(dest) {
-            const btn = event.target;
-            const originalText = btn.innerText;
-            btn.innerText = "LOCATING...";
-
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-                
-                const res = await fetch(API + '/calculate_fare', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({lat: lat, lon: lon, destination: dest})
-                });
-                const data = await res.json();
-                
-                if (confirm(`Fare to ${dest}: ${data.total_fare} bob. Distance: ${data.distance}km. Proceed?`)) {
-                    await fetch(API + '/send_request', {
-                        method: 'POST', headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({student: user, to: dest, fare: data.total_fare})
-                    });
-                    alert("Request Sent!");
-                }
-                btn.innerText = originalText;
-            }, (err) => {
-                alert("Please enable GPS to book a ride.");
-                btn.innerText = originalText;
-            }, { enableHighAccuracy: true });
-        }
-
         async function toggleStatus() {
-            currentRiderStatus = (currentRiderStatus === 'available') ? 'unavailable' : 'available';
             const btn = document.getElementById('toggle-btn');
-            btn.innerText = currentRiderStatus === 'available' ? 'GO UNAVAILABLE' : 'GO AVAILABLE';
-            btn.style.background = currentRiderStatus === 'available' ? 'var(--neon)' : 'var(--red)';
+            const badge = document.getElementById('rider-badge');
+            currentRiderStatus = (currentRiderStatus === 'available') ? 'unavailable' : 'available';
+
+            btn.innerText = (currentRiderStatus === 'available') ? "GO OFFLINE (UNAVAILABLE)" : "GO ONLINE (AVAILABLE)";
+            btn.style.background = (currentRiderStatus === 'available') ? "var(--neon)" : "var(--red)";
+            badge.innerText = (currentRiderStatus === 'available') ? "ONLINE" : "OFFLINE";
+            badge.style.background = (currentRiderStatus === 'available') ? "var(--neon)" : "var(--red)";
+            badge.style.color = (currentRiderStatus === 'available') ? "var(--dark)" : "white";
+
             await fetch(API + '/update_status', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({name: user, status: currentRiderStatus})
             });
-        }
-
-        async function updateRiderStats() {
-            const res = await fetch(API + '/rider_stats');
-            const data = await res.json();
-            document.getElementById('active-count').innerText = data.total_active;
         }
 
         async function syncRiders() {
             const res = await fetch(API + '/get_active_riders');
             const riders = await res.json();
             const grid = document.getElementById('rider-grid');
-            const rect = document.getElementById('rider-rect');
-            const rectPlate = document.getElementById('rect-plate');
-            const rectStatus = document.getElementById('rect-status');
-            const locBtns = document.querySelectorAll('.loc-btn');
+            const statusBox = document.getElementById('global-status');
 
             if(riders.length > 0) {
-                const firstRider = riders[0];
-                rectPlate.innerText = firstRider.plate;
-                rectStatus.innerText = "AVAILABLE";
-                rect.className = "rider-status-panel glow-neon";
-                locBtns.forEach(b => b.disabled = false);
-                document.getElementById('global-status').style.display = 'none';
-
+                statusBox.style.display = 'none';
                 grid.innerHTML = riders.map(r => `
-                    <div style="padding:10px; border-radius:10px; border:1px solid var(--neon); font-size:12px; text-align:center; background:white;">
+                    <div class="rider-card ${selectedRiderPlate === r.plate ? 'selected-rider' : ''}" 
+                         onclick="selectRider('${r.plate}', this)">
                         <strong>${r.name.split(' ')[0]}</strong><br>${r.plate}
                     </div>
                 `).join('');
             } else {
-                rectPlate.innerText = "NO RIDER";
-                rectStatus.innerText = "OFFLINE";
-                rect.className = "rider-status-panel glow-red";
-                locBtns.forEach(b => b.disabled = true);
-                document.getElementById('global-status').style.display = 'block';
+                statusBox.style.display = 'block';
                 grid.innerHTML = "";
             }
+        }
+
+        function selectRider(plate, element) {
+            document.querySelectorAll('.rider-card').forEach(c => c.classList.remove('selected-rider'));
+            element.classList.add('selected-rider');
+            selectedRiderPlate = plate;
+            document.getElementById('rect-plate').innerText = plate;
+            document.getElementById('rect-status').innerText = "SELECTED";
+            document.getElementById('rider-rect').classList.add('glow-neon');
+        }
+
+        async function requestRide(dest) {
+            if(!selectedRiderPlate) return alert("Please click a rider first!");
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const res = await fetch(API + '/calculate_fare', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({lat: pos.coords.latitude, lon: pos.coords.longitude, destination: dest})
+                });
+                const data = await res.json();
+                rideDetails = { student: user, to: dest, fare: data.total_fare, rider: selectedRiderPlate, lat: pos.coords.latitude, lon: pos.coords.longitude };
+                document.getElementById('modal-dest').innerText = "Ride to " + dest;
+                document.getElementById('modal-fare').innerText = data.total_fare + " KES";
+                document.getElementById('pay-modal').style.display = 'flex';
+            });
+        }
+
+        function closeModal() { document.getElementById('pay-modal').style.display = 'none'; }
+
+        async function confirmPayment() {
+            const phone = document.getElementById('mpesa-num').value;
+            if(!phone) return alert("Enter Phone Number");
+            await fetch(API + '/stk_push', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({phone: phone, amount: rideDetails.fare, student_name: user}) });
+            await fetch(API + '/send_request', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(rideDetails) });
+            alert("Payment Sent! Waiting for Rider...");
+            closeModal();
         }
 
         async function checkRequests() {
             const res = await fetch(API + '/get_requests');
             const data = await res.json();
-            document.getElementById('msgs').innerHTML = data.map(m => `<div class="request-item"><strong>${m.student}</strong> ➔ ${m.to} <br> <small>${m.fare} bob</small></div>`).reverse().join('');
+            document.getElementById('msgs').innerHTML = data.map(m => `
+                <div style="background:white; padding:15px; border-radius:15px; margin-top:10px; color: black; border-left: 5px solid var(--neon);">
+                    <strong>${m.student}</strong> ➔ ${m.to} (${m.fare}/-) <br>
+                    <a href="${m.map_link}" target="_blank" style="color:blue; font-size:12px;">View Route 📍</a>
+                </div>`).reverse().join('');
         }
     </script>
 </body>
