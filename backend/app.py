@@ -1,5 +1,5 @@
-import base64, datetime, requests, os, re
-from flask import Flask, request, jsonify, Blueprint
+import datetime, os
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from geopy.distance import geodesic 
 
@@ -17,62 +17,66 @@ KUTUS_LOCATIONS = {
     "Ngomongo": (-0.5110, 37.2890)
 }
 
-# --- 2. STORAGE & ERROR RECOVERY ---
+# --- 2. STORAGE ---
 students_db = {} 
 riders_db = []   
 pending_requests = [] 
 
+# --- 3. DATA PERSISTENCE ---
 def save_record(filename, entry):
     try:
         with open(filename, "a") as f:
             f.write(f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} | {entry}\n")
     except Exception as e:
-        print(f"File Write Error: {e}")
+        print(f"Write Error: {e}")
 
 def reload_records():
-    """Safely reloads data even if files are missing or broken."""
     if os.path.exists("students_records.txt"):
-        try:
-            with open("students_records.txt", "r") as f:
-                for line in f:
-                    parts = line.strip().split(" | ")
-                    if len(parts) >= 2:
-                        data = parts[1].split(":")
-                        if len(data) == 2: students_db[data[0].strip()] = data[1].strip()
-        except: print("Error reading students_records.txt")
+        with open("students_records.txt", "r") as f:
+            for line in f:
+                parts = line.strip().split(" | ")
+                if len(parts) >= 2:
+                    data = parts[1].split(":")
+                    if len(data) == 2: students_db[data[0]] = data[1]
     
     if os.path.exists("riders_records.txt"):
-        try:
-            with open("riders_records.txt", "r") as f:
-                for line in f:
-                    parts = line.strip().split(" | ")
-                    if len(parts) >= 2:
-                        r = parts[1].split(",")
-                        if len(r) >= 4:
-                            riders_db.append({"name": r[0], "plate": r[1], "id": r[2], "password": r[3], "status": "unavailable"})
-        except: print("Error reading riders_records.txt")
+        with open("riders_records.txt", "r") as f:
+            for line in f:
+                parts = line.strip().split(" | ")
+                if len(parts) >= 2:
+                    r = parts[1].split(",")
+                    if len(r) >= 4:
+                        riders_db.append({
+                            "name": r[0], "plate": r[1], "id": r[2], 
+                            "password": r[3], "status": "unavailable"
+                        })
 
-# --- 3. AUTH LOGIC ---
+# --- 4. ADVANCED LOGIC ---
+def calculate_fare(u_lat, u_lon, dest_name):
+    base_fare = 80
+    max_fare = 100
+    dest_coords = KUTUS_LOCATIONS.get(dest_name)
+    if not dest_coords or u_lat is None: return base_fare
+    try:
+        dist = geodesic((u_lat, u_lon), dest_coords).km
+        return max_fare if dist > 2.5 else base_fare
+    except: return base_fare
+
+# --- 5. ENHANCED API ENDPOINTS ---
 
 @app.route('/auth/signup', methods=['POST'])
 def signup():
     data = request.json
     role, name, password = data.get('role'), data.get('name', '').strip(), data.get('password')
-    
-    if not name or not password:
-        return jsonify({"error": "Missing name or password"}), 400
-
     if role == 'student':
-        if name in students_db: return jsonify({"error": "Username taken"}), 400
+        if name in students_db: return jsonify({"error": "Name taken"}), 400
         students_db[name] = password
         save_record("students_records.txt", f"{name}:{password}")
     else:
-        plate, id_num = data.get('plate', '').upper(), str(data.get('id_number', ''))
-        if any(r['plate'] == plate or r['id'] == id_num for r in riders_db):
-            return jsonify({"error": "Plate or ID already registered"}), 400
-        
-        new_rider = {"name": name, "plate": plate, "id": id_num, "password": password, "status": "available"}
-        riders_db.append(new_rider)
+        plate, id_num = data.get('plate', '').upper(), data.get('id_number')
+        if any(r['plate'] == plate for r in riders_db):
+            return jsonify({"error": "Plate already registered"}), 400
+        riders_db.append({"name": name, "plate": plate, "id": id_num, "password": password, "status": "available"})
         save_record("riders_records.txt", f"{name},{plate},{id_num},{password}")
     return jsonify({"status": "success"}), 201
 
@@ -81,54 +85,44 @@ def login():
     data = request.json
     role, name, password = data.get('role'), data.get('name', '').strip(), data.get('password')
     if role == 'student':
-        if name in students_db and students_db[name] == password:
-            return jsonify({"status": "success"}), 200
+        if students_db.get(name) == password: return jsonify({"status": "success"}), 200
     else:
         rider = next((r for r in riders_db if r['name'] == name and r['password'] == password), None)
         if rider:
-            rider['status'] = 'available'
+            rider['status'] = 'available' # Auto-online on login
             return jsonify({"status": "success", "plate": rider['plate']}), 200
-    return jsonify({"error": "Invalid credentials"}), 401
-
-# --- 4. DISPATCH (The 80 Bob Rule) ---
+    return jsonify({"error": "Invalid login"}), 401
 
 @app.route('/send_request', methods=['POST'])
 def send_request():
-    data = request.json 
+    data = request.json
+    # Validation: Must have a destination and a rider selected
+    if not data.get('destination') or not data.get('rider_plate'):
+        return jsonify({"error": "Missing destination or rider"}), 400
+
+    data['fare'] = calculate_fare(data.get('lat'), data.get('lon'), data.get('destination'))
     data['time'] = datetime.datetime.now().strftime('%H:%M')
+    data['id'] = f"REQ-{datetime.datetime.now().strftime('%f')}" # Unique ID for completion
     
-    # 80 KES DEFAULT FARE
-    fare = 80 
-    
-    dest_name = data.get('destination')
-    u_lat, u_lon = data.get('lat'), data.get('lon')
-    dest_coords = KUTUS_LOCATIONS.get(dest_name)
-    
-    # Check distance: Only increase if it's very far, otherwise stay 80
-    if dest_coords and u_lat:
-        try:
-            dist = geodesic((u_lat, u_lon), dest_coords).km
-            if dist > 2.5: # Example: Long distance surcharge
-                fare = 120
-        except Exception: 
-            fare = 80 # Fallback to default if GPS math fails
-    
-    data['fare'] = fare
+    if len(pending_requests) > 50: pending_requests.pop(0) # RAM Reset
     pending_requests.append(data)
-    return jsonify({"status": "sent", "fare": fare}), 200
+    return jsonify({"status": "sent", "fare": data['fare']}), 200
+
+@app.route('/complete_request', methods=['POST'])
+def complete_request():
+    """Removes the request from the rider's screen after drop-off."""
+    req_id = request.json.get('request_id')
+    global pending_requests
+    pending_requests = [r for r in pending_requests if r.get('id') != req_id]
+    return jsonify({"status": "success"}), 200
 
 @app.route('/get_requests')
 def get_requests():
-    rider_plate = request.args.get('plate')
-    if not rider_plate: return jsonify([])
-    # Direct Dispatch: One student request -> One specific rider
-    return jsonify([r for r in pending_requests if r.get('rider_plate') == rider_plate])
-
-# --- 5. SYSTEM STATUS ---
+    plate = request.args.get('plate')
+    return jsonify([r for r in pending_requests if r.get('rider_plate') == plate])
 
 @app.route('/get_active_riders')
 def get_active_riders():
-    # Only show riders who are currently available
     return jsonify([{"name": r['name'], "plate": r['plate']} for r in riders_db if r['status'] == 'available'])
 
 @app.route('/update_status', methods=['POST'])
@@ -143,5 +137,4 @@ def update_status():
 
 if __name__ == '__main__':
     reload_records()
-    # Runs on port 10000 with Debug mode on for your development
     app.run(host='0.0.0.0', port=10000, debug=True)

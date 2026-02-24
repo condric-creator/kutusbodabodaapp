@@ -81,6 +81,17 @@
 
     <script>
         const API = "http://127.0.0.1:10000";
+        // Coordinates for calculation (Matching Backend)
+        const KUTUS_LOCATIONS = {
+            "Spenza": {lat: -0.5042, lon: 37.2801}, 
+            "School": {lat: -0.5015, lon: 37.2805},
+            "Raha Premium": {lat: -0.5065, lon: 37.2835},
+            "Ngomongo": {lat: -0.5110, lon: 37.2890},
+            "Diaspora": {lat: -0.5080, lon: 37.2850},
+            "Mjini": {lat: -0.5150, lon: 37.2950}, 
+            "Icon": {lat: -0.5020, lon: 37.2820}
+        };
+
         let role = 'student', user = '', userPlate = '', selectedRiderPlate = null, rideDetails = {};
 
         function setRole(r) {
@@ -88,7 +99,6 @@
             document.getElementById('tab-st').style.background = r === 'student' ? '#00ffa3' : 'white';
             document.getElementById('tab-rd').style.background = r === 'rider' ? '#00ffa3' : 'white';
             document.getElementById('rd-fields').style.display = r === 'rider' ? 'block' : 'none';
-            document.getElementById('auth-error').innerText = "";
         }
 
         async function handleAuth(type) {
@@ -96,8 +106,6 @@
             const pass = document.getElementById('auth-pass').value;
             const plate = document.getElementById('auth-plate').value;
             const idNum = document.getElementById('auth-id').value;
-            const errBox = document.getElementById('auth-error');
-
             if(!name || !pass) return alert("Fill Name and Password");
 
             const endpoint = type === 'signup' ? '/auth/signup' : '/auth/login';
@@ -108,16 +116,13 @@
                     body: JSON.stringify({ role, name, password: pass, plate, id_number: idNum })
                 });
                 const data = await res.json();
-
                 if(res.ok) {
                     user = name;
                     userPlate = data.plate || plate; 
                     document.getElementById('user-display').innerText = user.split(' ')[0];
                     showDash();
-                } else {
-                    errBox.innerText = data.error || "Access Denied";
-                }
-            } catch (e) { errBox.innerText = "Backend Offline!"; }
+                } else { alert(data.error); }
+            } catch (e) { alert("Backend Offline!"); }
         }
 
         async function handleLogout() {
@@ -146,7 +151,7 @@
                     <div style="margin-top:25px;">
                         <h4 style="margin-bottom:10px; font-family:Orbitron; font-size:12px;">WHERE TO?</h4>
                         <div id="loc-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                            ${['Spenza', 'School', 'Raha Premium', 'Ngomongo', 'Diaspora', 'Mjini', 'Icon'].map(loc => 
+                            ${Object.keys(KUTUS_LOCATIONS).map(loc => 
                                 `<button class="btn" onclick="openPayment('${loc}')" style="font-size:12px; background:white; color:black; border:1px solid #ddd; box-shadow:none;">${loc}</button>`
                             ).join('')}
                         </div>
@@ -169,6 +174,7 @@
             const res = await fetch(API + '/get_active_riders');
             const riders = await res.json();
             const grid = document.getElementById('rider-grid');
+            if(!grid) return;
             grid.innerHTML = riders.map(r => `
                 <div class="rider-card ${selectedRiderPlate === r.plate ? 'selected-rider' : ''}" 
                      onclick="selectOneRider('${r.plate}')">
@@ -184,12 +190,47 @@
             syncRiders();
         }
 
+        // Logic to get Distance (Haversine Formula)
+        function getKmDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2-lat1) * Math.PI / 180;
+            const dLon = (lon2-lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
         function openPayment(dest) {
             if(!selectedRiderPlate) return alert("CRITICAL: CLICK 1 RIDER FIRST!");
-            rideDetails = { student: user, destination: dest, fare: 50, rider_plate: selectedRiderPlate };
-            document.getElementById('modal-dest').innerText = "Ride to " + dest;
-            document.getElementById('modal-fare').innerText = "50 KES";
-            document.getElementById('pay-modal').style.display = 'flex';
+            
+            // Get Student Position to calculate fare on frontend first
+            navigator.geolocation.getCurrentPosition((pos) => {
+                const sLat = pos.coords.latitude;
+                const sLon = pos.coords.longitude;
+                const dLoc = KUTUS_LOCATIONS[dest];
+                
+                const dist = getKmDistance(sLat, sLon, dLoc.lat, dLoc.lon);
+                const fare = dist > 2.5 ? 100 : 80; // 80 Bob standard, 100 Bob long
+
+                rideDetails = { 
+                    student: user, 
+                    destination: dest, 
+                    fare: fare, 
+                    rider_plate: selectedRiderPlate,
+                    lat: sLat,
+                    lon: sLon 
+                };
+
+                document.getElementById('modal-dest').innerText = "Ride to " + dest + ` (${dist.toFixed(1)}km)`;
+                document.getElementById('modal-fare').innerText = fare + " KES";
+                document.getElementById('pay-modal').style.display = 'flex';
+            }, () => {
+                // Fallback if GPS is blocked
+                rideDetails = { student: user, destination: dest, fare: 80, rider_plate: selectedRiderPlate };
+                document.getElementById('modal-fare').innerText = "80 KES";
+                document.getElementById('pay-modal').style.display = 'flex';
+            });
         }
 
         function closeModal() { document.getElementById('pay-modal').style.display = 'none'; }
@@ -203,7 +244,7 @@
                 headers: {'Content-Type': 'application/json'}, 
                 body: JSON.stringify(rideDetails) 
             });
-            alert("Sent! Waiting for " + selectedRiderPlate + " to arrive.");
+            alert("Sent! Waiting for " + selectedRiderPlate);
             closeModal();
         }
 
@@ -211,6 +252,7 @@
             const res = await fetch(`${API}/get_requests?plate=${userPlate}`);
             const requests = await res.json();
             const container = document.getElementById('my-requests');
+            if(!container) return;
             
             if(requests.length === 0) {
                 container.innerHTML = `<p style="text-align:center; color:#555; margin-top:50px;">Waiting for direct student requests...</p>`;
