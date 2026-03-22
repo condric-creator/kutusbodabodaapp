@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Kutus Boda.com</title>
+    <title>Kutus Boda | RAM Speed Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -129,7 +129,7 @@
 
             <input id="auth-id" type="text" placeholder="Phone Number">
             <input id="auth-pass" type="password" placeholder="Password">
-            <button class="btn-main" onclick="login()">login</button>
+            <button class="btn-main" onclick="login()">Enter Dashboard</button>
             
             <div style="margin-top: 25px; font-size: 13px; display: flex; justify-content: space-between;">
                 <span style="color:var(--gray); cursor:pointer;" onclick="showScr('signup-scr')">New? <b style="color:var(--neon)">Sign Up</b></span>
@@ -141,7 +141,7 @@
 
     <div id="signup-scr" class="screen" style="justify-content: center;">
         <div class="card">
-            <h2 style="font-family:Orbitron; color:var(--neon);">CREATE ACCOUNT</h2>
+            <h2 style="font-family:Orbitron; color:var(--neon);">JOIN NETWORK</h2>
             <input id="reg-name" placeholder="Full Name">
             <input id="reg-phone" placeholder="M-Pesa Number">
             <input id="reg-pass" type="password" placeholder="Create Password">
@@ -156,7 +156,7 @@
 
     <div id="reset-scr" class="screen" style="justify-content: center;">
         <div class="card" id="otp-step-1">
-            <h2 style="font-family:Orbitron; color:var(--neon);">RECOVER </h2>
+            <h2 style="font-family:Orbitron; color:var(--neon);">RECOVER</h2>
             <p style="color: var(--gray); font-size: 12px; margin-bottom: 20px;">Enter phone to receive recovery OTP</p>
             <input id="reset-phone" type="text" placeholder="Registered Phone Number">
             <button class="btn-main" onclick="sendOTP()">Get OTP Code</button>
@@ -212,7 +212,7 @@
     </div>
 
     <script>
-        const API = "http://192.168.0.117:10000";
+        const API = "http://127.0.0.1:10000";
         let role = 'student', uName = "", uPhone = "", uPlate = "", selRider = null;
         let uLat = -0.5732, uLon = 37.3253; 
 

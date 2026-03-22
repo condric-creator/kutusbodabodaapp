@@ -3,46 +3,52 @@ import re
 
 riders_bp = Blueprint('riders', __name__)
 
+# Temporary RAM storage
+riders_db = []
+
 def validate_plate(plate):
-    # Pattern: KM + 2 letters + 3 numbers (not 0) + 1 letter (Example: KMGS567M)
     pattern = r"^KM[A-Z]{2}[1-9][0-9]{2}[A-Z]$"
     return bool(re.match(pattern, plate))
 
 @riders_bp.route('/register', methods=['POST'])
 def register_rider():
     data = request.get_json()
-    
     full_name = data.get('name', '')
     id_number = str(data.get('id_number', ''))
     plate = data.get('plate', '').upper()
 
-    # 1. Check for exactly 3 names
-    name_parts = full_name.strip().split()
-    if len(name_parts) != 3:
-        return jsonify({"error": "You must provide exactly 3 names (First, Middle, Last)"}), 400
+    if len(full_name.strip().split()) != 3:
+        return jsonify({"error": "You must provide exactly 3 names"}), 400
 
-    # 2. Check ID length (not more than 9 digits)
     if not id_number.isdigit() or len(id_number) > 9:
-        return jsonify({"error": "ID number must be digits only and not more than 9 characters"}), 400
+        return jsonify({"error": "ID number must be digits only (max 9)"}), 400
 
-    # 3. Check Plate format
     if not validate_plate(plate):
-        return jsonify({"error": "Invalid Plate! Use format KMGS567M (Numbers cannot start with 0)"}), 400
+        return jsonify({"error": "Invalid Plate! Use format KMGS567M"}), 400
 
-    # If all checks pass:
+    # New: Add 'status' set to 'available' by default
+    new_rider = {
+        "name": full_name,
+        "plate": plate,
+        "id": id_number,
+        "status": "available" 
+    }
+    
+    riders_db.append(new_rider)
+
     return jsonify({
         "status": "Success",
-        "rider": {
-            "name": full_name,
-            "plate": plate,
-            "id": id_number
-        },
-        "message": "you have been regirested to kutus bodaboda app!"
+        "rider": new_rider,
+        "message": "you have been registered to kutus bodaboda app!"
     }), 201
-@riders_bp.route('/list', methods=['GET'])
-def get_riders():
-    # This sends back the list of all riders we have stored in RAM
-    return jsonify({
-        "total_riders": len(riders_db),
-        "riders": riders_db
-    }), 200    
+
+# New Route: To let the rider switch between Available and Unavailable
+@riders_bp.route('/toggle_status/<id_num>', methods=['PATCH'])
+def toggle_status(id_num):
+    for rider in riders_db:
+        if rider['id'] == id_num:
+            # If available -> make unavailable, and vice versa
+            rider['status'] = "unavailable" if rider['status'] == "available" else "available"
+            return jsonify({"message": f"Status is now {rider['status']}", "rider": rider}), 200
+    
+    return jsonify({"error": "Rider not found"}), 404
