@@ -302,5 +302,11 @@ def reset_password():
     
     return jsonify({"error": "Invalid or expired OTP"}), 400
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000, debug=True)
+if __name__ == "__main__":
+    import os
+    # If we are on Railway, it will provide a PORT. 
+    # If not, we use 10000 and turn on debug mode for local testing.
+    port = int(os.environ.get("PORT", 10000))
+    is_dev = os.environ.get("PORT") is None # True if on your laptop
+    
+    app.run(host='0.0.0.0', port=port, debug=is_dev)
