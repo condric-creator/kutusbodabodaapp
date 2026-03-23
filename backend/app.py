@@ -14,9 +14,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 # --- 1. INITIALIZATION & LOGGING ---
 app = Flask(__name__)
 CORS(app)
-
+@app.route('/')
+def home():
+    return jsonify({"status": "Success", "message": "Kutus Boda Backend is LIVE!"})
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) 
 
 # --- 2. DATABASE CONFIGURATION ---
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///kutus_boda_v6.db'
